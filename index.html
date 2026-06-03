@@ -1,0 +1,2366 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mijn Dag">
+<meta name="theme-color" content="#1C1510">
+<title>Mijn Dag</title>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Quicksand:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* Dark warm base */
+  --bg:         #1C1510;
+  --bg2:        #231A13;
+  --card:       #2A1F17;
+  --card2:      #321F14;
+  --border:     #3D2E22;
+  --border2:    #4A3828;
+
+  /* Sunset palette */
+  --ember:      #E8753A;
+  --ember-dim:  #C45E28;
+  --gold:       #E8AA50;
+  --gold-dim:   #C48830;
+  --rose:       #D4604A;
+  --rose-dim:   #A84030;
+  --dusk:       #8B5E8B;
+  --amber:      #D4903A;
+  --peach:      #E8A07A;
+
+  /* Text */
+  --ink:        #F2E8DC;
+  --ink2:       #C8B8A8;
+  --muted:      #8A7060;
+  --faint:      #5A4838;
+
+  /* Energy */
+  --e-groen:    #6AAA72;
+  --e-groen-bg: rgba(106,170,114,0.15);
+  --e-geel:     #D4A84A;
+  --e-geel-bg:  rgba(212,168,74,0.15);
+  --e-oranje:   #D47A3A;
+  --e-oranje-bg:rgba(212,122,58,0.15);
+  --e-rood:     #C45050;
+  --e-rood-bg:  rgba(196,80,80,0.15);
+
+  --radius:     18px;
+  --radius-sm:  12px;
+  --shadow:     0 4px 24px rgba(0,0,0,0.4);
+  --shadow-sm:  0 2px 12px rgba(0,0,0,0.3);
+
+  --safe-top:    env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Quicksand', sans-serif;
+  font-weight: 400;
+  min-height: 100vh;
+  padding-bottom: calc(72px + var(--safe-bottom));
+  padding-top: var(--safe-top);
+  overflow-x: hidden;
+}
+
+/* Subtle warm grain overlay */
+body::after {
+  content:'';
+  position:fixed; inset:0; pointer-events:none; z-index:0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  opacity:0.8;
+}
+
+/* Sunset glow top-right */
+body::before {
+  content:'';
+  position:fixed; top:-80px; right:-80px;
+  width:320px; height:320px; border-radius:50%;
+  background: radial-gradient(circle, rgba(232,117,58,0.12) 0%, rgba(212,144,58,0.06) 50%, transparent 70%);
+  pointer-events:none; z-index:0;
+}
+
+.z1 { position:relative; z-index:1; }
+
+/* ══════════════════════════════════════
+   HEADER
+══════════════════════════════════════ */
+.header {
+  padding: 20px 20px 14px;
+  background: linear-gradient(180deg, #1C1510 0%, rgba(28,21,16,0.95) 100%);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top:0; z-index:100;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.header-row {
+  display:flex; justify-content:space-between; align-items:flex-start;
+}
+
+.greeting {
+  font-family: 'Libre Baskerville', serif;
+  font-style: italic;
+  font-size: 28px;
+  background: linear-gradient(135deg, var(--gold) 0%, var(--ember) 60%, var(--rose) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.1;
+}
+
+.date-str {
+  font-size: 11px; color: var(--muted);
+  margin-top: 3px; letter-spacing: 0.08em;
+  text-transform: uppercase; font-weight: 500;
+}
+
+.season-chip {
+  font-size: 11px; font-weight: 600;
+  color: var(--gold); background: rgba(232,170,80,0.12);
+  border: 1px solid rgba(232,170,80,0.25);
+  padding: 5px 11px; border-radius: 20px;
+  white-space: nowrap; margin-top: 2px;
+}
+
+/* ══════════════════════════════════════
+   ENERGY
+══════════════════════════════════════ */
+.energy-wrap {
+  padding: 14px 18px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+}
+
+.eyebrow {
+  font-size: 10px; letter-spacing: 0.13em;
+  text-transform: uppercase; color: var(--muted);
+  font-weight: 600; margin-bottom: 10px;
+}
+
+.energy-row {
+  display: grid; grid-template-columns: repeat(4,1fr); gap: 8px;
+}
+
+.ebtn {
+  border: 1.5px solid var(--border2);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  padding: 11px 4px 9px;
+  cursor: pointer; text-align: center;
+  transition: all 0.2s ease;
+  font-family: 'Quicksand', sans-serif;
+}
+
+.ebtn .dot {
+  width: 16px; height: 16px; border-radius: 50%;
+  margin: 0 auto 6px; transition: transform 0.2s;
+}
+
+.ebtn[data-e="groen"]  .dot { background: var(--e-groen); box-shadow: 0 0 8px rgba(106,170,114,0.4); }
+.ebtn[data-e="geel"]   .dot { background: var(--e-geel);  box-shadow: 0 0 8px rgba(212,168,74,0.4); }
+.ebtn[data-e="oranje"] .dot { background: var(--e-oranje);box-shadow: 0 0 8px rgba(212,122,58,0.4); }
+.ebtn[data-e="rood"]   .dot { background: var(--e-rood);  box-shadow: 0 0 8px rgba(196,80,80,0.4); }
+
+.ebtn .elabel { font-size: 10px; color: var(--muted); font-weight: 600; line-height: 1.2; }
+
+.ebtn.active { border-color: transparent; }
+.ebtn.active[data-e="groen"]  { background: var(--e-groen-bg);  border-color: var(--e-groen); }
+.ebtn.active[data-e="geel"]   { background: var(--e-geel-bg);   border-color: var(--e-geel); }
+.ebtn.active[data-e="oranje"] { background: var(--e-oranje-bg); border-color: var(--e-oranje); }
+.ebtn.active[data-e="rood"]   { background: var(--e-rood-bg);   border-color: var(--e-rood); }
+.ebtn.active .dot { transform: scale(1.3); }
+
+.ehint {
+  margin-top: 10px; padding: 9px 13px;
+  border-radius: 10px; font-size: 12px;
+  color: var(--ink2); display: none; line-height: 1.5;
+  font-weight: 500;
+}
+.ehint.visible { display: block; }
+.ehint.groen  { background: var(--e-groen-bg);  border-left: 3px solid var(--e-groen); }
+.ehint.geel   { background: var(--e-geel-bg);   border-left: 3px solid var(--e-geel); }
+.ehint.oranje { background: var(--e-oranje-bg); border-left: 3px solid var(--e-oranje); }
+.ehint.rood   { background: var(--e-rood-bg);   border-left: 3px solid var(--e-rood); }
+
+/* ══════════════════════════════════════
+   SCROLL AREA
+══════════════════════════════════════ */
+.scroll { padding: 14px 14px 20px; }
+
+/* ══════════════════════════════════════
+   CARDS
+══════════════════════════════════════ */
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  margin-bottom: 14px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.card-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 15px 18px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.card-title {
+  font-family: 'Libre Baskerville', serif;
+  font-size: 17px; font-weight: 400;
+  color: var(--ink); letter-spacing: 0.01em;
+}
+
+.card-btn {
+  font-size: 12px; color: var(--ember); font-weight: 600;
+  background: none; border: none; cursor: pointer;
+  font-family: 'Quicksand', sans-serif;
+  padding: 3px 0;
+}
+
+.card-count {
+  font-size: 11px; color: var(--muted);
+  background: rgba(255,255,255,0.05);
+  padding: 3px 9px; border-radius: 10px;
+  font-weight: 600;
+}
+
+/* ══════════════════════════════════════
+   RITUAL / MOON
+══════════════════════════════════════ */
+.ritual-tiles {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 10px; padding: 12px;
+}
+
+.rtile {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  padding: 13px 12px; text-align: center;
+}
+
+.rtile .ricon  { font-size: 28px; line-height: 1; margin-bottom: 5px; }
+.rtile .rlabel { font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); font-weight: 600; margin-bottom: 3px; }
+.rtile .rval   { font-family: 'Libre Baskerville', serif; font-size: 14px; color: var(--ink); line-height: 1.3; }
+.rtile .rsub   { font-size: 10px; color: var(--muted); margin-top: 2px; font-weight: 500; }
+.rtile.wide    { grid-column: 1 / -1; }
+
+/* ══════════════════════════════════════
+   CALENDAR
+══════════════════════════════════════ */
+.cal-empty {
+  padding: 18px; font-size: 13px; color: var(--muted);
+  text-align: center; font-style: italic; line-height: 1.6;
+}
+
+.cal-event {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 11px 18px; border-bottom: 1px solid var(--border);
+}
+.cal-event:last-child { border-bottom: none; }
+
+.cal-time {
+  font-size: 11px; color: var(--muted); min-width: 46px;
+  padding-top: 2px; font-weight: 600; letter-spacing: 0.03em;
+}
+
+.cal-pip {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--ember); margin-top: 5px; flex-shrink: 0;
+  box-shadow: 0 0 6px rgba(232,117,58,0.5);
+}
+
+.cal-name { font-size: 13px; color: var(--ink2); line-height: 1.4; }
+
+/* ══════════════════════════════════════
+   TASKS
+══════════════════════════════════════ */
+.titem {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 18px; border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background 0.12s;
+  -webkit-user-select: none; user-select: none;
+}
+.titem:last-child { border-bottom: none; }
+.titem:active { background: rgba(255,255,255,0.03); }
+.titem.done { opacity: 0.35; }
+.titem.done .tname { text-decoration: line-through; }
+.titem.dimmed { opacity: 0.18; pointer-events: none; }
+
+.tchk {
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 1.5px solid var(--border2); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.18s;
+}
+.titem.done .tchk { background: var(--ember); border-color: var(--ember); }
+.tchk svg { display: none; }
+.titem.done .tchk svg { display: block; }
+
+.tname { font-size: 14px; flex: 1; line-height: 1.4; color: var(--ink2); font-weight: 500; }
+
+.epip {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+.epip.groen  { background: var(--e-groen); }
+.epip.geel   { background: var(--e-geel); }
+.epip.oranje { background: var(--e-oranje); }
+.epip.rood   { background: var(--e-rood); }
+
+.delbtn {
+  width: 26px; height: 26px; border-radius: 8px;
+  border: none; background: transparent; color: var(--faint);
+  cursor: pointer; font-size: 18px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.delbtn:active { color: var(--rose); background: rgba(212,96,74,0.15); }
+
+.hide-done .titem.done { display: none; }
+
+.editbtn {
+  width: 26px; height: 26px; border-radius: 8px;
+  border: none; background: transparent; color: var(--muted);
+  cursor: pointer; font-size: 14px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.editbtn:active { color: var(--gold); background: rgba(232,170,80,0.15); }
+
+.dur-badge {
+  font-size: 11px; font-weight: 600;
+  padding: 2px 7px; border-radius: 20px;
+  background: rgba(139,94,139,0.15); color: var(--dusk);
+  white-space: nowrap; flex-shrink: 0;
+}
+
+.add-row {
+  display: flex; gap: 8px; align-items: center;
+  padding: 10px 14px; border-top: 1px solid var(--border);
+}
+
+.add-inp {
+  flex: 1; border: none; background: transparent;
+  font-family: 'Quicksand', sans-serif; font-size: 13px;
+  color: var(--ink); outline: none; padding: 5px 0;
+  font-weight: 500;
+}
+.add-inp::placeholder { color: var(--faint); }
+
+.esel {
+  border: 1px solid var(--border2); border-radius: 8px;
+  background: var(--bg2); font-family: 'Quicksand', sans-serif;
+  font-size: 11px; color: var(--muted); padding: 5px 6px;
+  outline: none; cursor: pointer;
+}
+
+.add-circ {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: none; background: var(--ember); color: white;
+  font-size: 22px; cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.18s; font-weight: 300;
+  box-shadow: 0 0 12px rgba(232,117,58,0.35);
+}
+.add-circ:active { background: var(--ember-dim); }
+
+/* ══════════════════════════════════════
+   TABS
+══════════════════════════════════════ */
+.tabs {
+  display: flex; padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto; gap: 0;
+  scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar { display: none; }
+
+.tab {
+  font-size: 12px; color: var(--muted); font-weight: 600;
+  padding: 10px 10px 8px; cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.18s; white-space: nowrap;
+}
+.tab.active { color: var(--ember); border-bottom-color: var(--ember); }
+
+.tpane { display: none; }
+.tpane.active { display: block; }
+
+/* ══════════════════════════════════════
+   BACKLOG / MASTERLIST
+══════════════════════════════════════ */
+.bitem {
+  display: flex; align-items: center; gap: 11px;
+  padding: 11px 18px; border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background 0.12s;
+}
+.bitem:last-child { border-bottom: none; }
+.bitem:active { background: rgba(255,255,255,0.03); }
+.bitem.done { opacity: 0.3; }
+.bitem.done .tname { text-decoration: line-through; }
+
+.bdate {
+  font-size: 10px; color: var(--muted); font-weight: 600;
+  background: rgba(255,255,255,0.05);
+  padding: 2px 7px; border-radius: 8px;
+  white-space: nowrap; flex-shrink: 0;
+}
+
+.bdate.today-date {
+  color: var(--gold); background: rgba(232,170,80,0.15);
+}
+
+.bdate.overdue {
+  color: var(--rose); background: rgba(212,96,74,0.15);
+}
+
+/* ══════════════════════════════════════
+   EMPTY STATE
+══════════════════════════════════════ */
+.empty {
+  padding: 22px 18px; font-size: 13px;
+  color: var(--muted); font-style: italic;
+  text-align: center; line-height: 1.6;
+}
+
+/* ══════════════════════════════════════
+   BOTTOM NAV
+══════════════════════════════════════ */
+.bnav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: rgba(28,21,16,0.95);
+  border-top: 1px solid var(--border);
+  display: flex; padding-bottom: var(--safe-bottom);
+  z-index: 100; backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.nbtn {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 10px 4px 8px; background: none; border: none;
+  cursor: pointer; color: var(--faint); transition: color 0.15s;
+  font-family: 'Quicksand', sans-serif;
+}
+.nbtn.active { color: var(--ember); }
+.nicon { font-size: 20px; line-height: 1; margin-bottom: 3px; }
+.nlabel { font-size: 9px; letter-spacing: 0.06em; font-weight: 600; text-transform: uppercase; }
+
+/* ══════════════════════════════════════
+   PAGES
+══════════════════════════════════════ */
+.page { display: none; }
+.page.active { display: block; }
+
+/* ══════════════════════════════════════
+   MODAL
+══════════════════════════════════════ */
+.moverlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.65); z-index: 200;
+  align-items: flex-end;
+}
+.moverlay.open { display: flex; }
+
+.modal {
+  background: var(--card2); border-radius: 24px 24px 0 0;
+  padding: 24px 18px calc(28px + var(--safe-bottom));
+  width: 100%; max-height: 88vh; overflow-y: auto;
+  border-top: 1px solid var(--border2);
+}
+
+.modal-handle {
+  width: 40px; height: 4px; border-radius: 2px;
+  background: var(--border2); margin: 0 auto 20px;
+}
+
+.modal-title {
+  font-family: 'Libre Baskerville', serif;
+  font-size: 20px; font-style: italic;
+  color: var(--ink); margin-bottom: 20px;
+}
+
+.mfield { margin-bottom: 14px; }
+.mfield label {
+  font-size: 10px; text-transform: uppercase;
+  letter-spacing: 0.1em; color: var(--muted);
+  display: block; margin-bottom: 6px; font-weight: 600;
+}
+.mfield input, .mfield select, .mfield textarea {
+  width: 100%; padding: 11px 13px;
+  border: 1px solid var(--border2); border-radius: 11px;
+  font-family: 'Quicksand', sans-serif; font-size: 13px;
+  color: var(--ink); background: var(--bg2); outline: none;
+  font-weight: 500;
+}
+.mfield input::placeholder { color: var(--faint); }
+
+.mactions { display: flex; gap: 9px; margin-top: 20px; }
+
+.mbtn-p {
+  flex: 1; padding: 14px;
+  background: linear-gradient(135deg, var(--ember) 0%, var(--rose-dim) 100%);
+  color: white; border: none; border-radius: 13px;
+  font-family: 'Quicksand', sans-serif; font-size: 14px;
+  font-weight: 700; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(232,117,58,0.3);
+}
+
+.mbtn-c {
+  padding: 14px 18px; background: transparent; color: var(--muted);
+  border: 1px solid var(--border2); border-radius: 13px;
+  font-family: 'Quicksand', sans-serif; font-size: 13px;
+  font-weight: 600; cursor: pointer;
+}
+
+
+/* ══════════════════════════════════════
+   TAROT READING
+══════════════════════════════════════ */
+.reading-tabs {
+  display: flex; gap: 0; padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto; scrollbar-width: none;
+}
+.reading-tabs::-webkit-scrollbar { display: none; }
+
+.reading-card-slot {
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.reading-card-slot:last-child { border-bottom: none; }
+
+.slot-header {
+  display: flex; justify-content: space-between;
+  align-items: flex-start; margin-bottom: 10px;
+}
+
+.slot-number {
+  width: 24px; height: 24px; border-radius: 50%;
+  background: rgba(232,117,58,0.15);
+  border: 1px solid rgba(232,117,58,0.3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; color: var(--ember); font-weight: 700;
+  flex-shrink: 0;
+}
+
+.slot-question {
+  font-size: 12px; color: var(--muted);
+  font-style: italic; line-height: 1.5; flex: 1;
+  margin-left: 10px; padding-top: 3px;
+}
+
+.slot-deck {
+  font-size: 10px; color: var(--dusk);
+  background: rgba(139,94,139,0.12);
+  border: 1px solid rgba(139,94,139,0.2);
+  padding: 2px 8px; border-radius: 8px;
+  font-weight: 600; white-space: nowrap;
+  margin-left: 8px; flex-shrink: 0;
+}
+
+.card-name-input {
+  width: 100%; padding: 9px 12px;
+  border: 1px solid var(--border2); border-radius: 10px;
+  background: var(--bg2); color: var(--ink);
+  font-family: 'Libre Baskerville', serif;
+  font-size: 14px; font-style: italic; outline: none;
+  margin-bottom: 8px;
+}
+.card-name-input::placeholder { color: var(--faint); font-style: italic; }
+
+.card-notes-input {
+  width: 100%; padding: 9px 12px;
+  border: 1px solid var(--border2); border-radius: 10px;
+  background: var(--bg2); color: var(--ink2);
+  font-family: 'Quicksand', sans-serif;
+  font-size: 13px; outline: none; resize: none;
+  min-height: 70px; line-height: 1.6; font-weight: 400;
+}
+.card-notes-input::placeholder { color: var(--faint); }
+
+.reading-actions {
+  display: flex; gap: 8px; padding: 14px 18px;
+  border-top: 1px solid var(--border);
+}
+
+/* Archive */
+.archive-item {
+  padding: 14px 18px; border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background 0.12s;
+}
+.archive-item:last-child { border-bottom: none; }
+.archive-item:active { background: rgba(255,255,255,0.03); }
+
+.archive-date {
+  font-size: 10px; color: var(--muted); font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px;
+}
+
+.archive-season {
+  font-family: 'Libre Baskerville', serif;
+  font-size: 15px; color: var(--ink); margin-bottom: 6px;
+}
+
+.archive-cards {
+  display: flex; gap: 6px; flex-wrap: wrap;
+}
+
+.archive-chip {
+  font-size: 11px; color: var(--ink2);
+  background: rgba(255,255,255,0.05);
+  padding: 2px 8px; border-radius: 8px;
+  border: 1px solid var(--border2);
+}
+
+/* Reading detail modal */
+.reading-detail {
+  padding: 0;
+}
+
+.detail-slot {
+  padding: 14px 18px; border-bottom: 1px solid var(--border);
+}
+.detail-slot:last-child { border-bottom: none; }
+
+.detail-card-name {
+  font-family: 'Libre Baskerville', serif;
+  font-size: 16px; font-style: italic; color: var(--gold);
+  margin-bottom: 6px;
+}
+
+.detail-question {
+  font-size: 11px; color: var(--muted); font-style: italic;
+  margin-bottom: 8px; line-height: 1.4;
+}
+
+.detail-notes {
+  font-size: 13px; color: var(--ink2); line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+/* ══════════════════════════════════════
+   SETTINGS PAGE
+══════════════════════════════════════ */
+.sfield {
+  padding: 14px 16px; border-bottom: 1px solid var(--border);
+}
+.sfield:last-child { border-bottom: none; }
+.sfield label {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--muted); display: block; margin-bottom: 7px; font-weight: 600;
+}
+.sfield input {
+  width: 100%; padding: 10px 12px;
+  border: 1px solid var(--border2); border-radius: 10px;
+  font-family: 'Quicksand', sans-serif; font-size: 12px;
+  color: var(--ink); background: var(--bg2); outline: none;
+  margin-bottom: 8px; font-weight: 500;
+}
+.sfield input::placeholder { color: var(--faint); }
+
+.sbtn {
+  width: 100%; padding: 11px;
+  background: rgba(232,117,58,0.15); color: var(--ember);
+  border: 1px solid rgba(232,117,58,0.3); border-radius: 10px;
+  font-family: 'Quicksand', sans-serif; font-size: 13px;
+  font-weight: 700; cursor: pointer;
+}
+
+.setup-guide {
+  font-size: 12px; color: var(--muted); line-height: 1.8;
+  margin-bottom: 12px;
+}
+.setup-guide ol { padding-left: 16px; }
+.setup-guide strong { color: var(--ink2); }
+
+.danger-btn {
+  width: 100%; padding: 11px;
+  background: rgba(196,80,80,0.1); color: var(--rose);
+  border: 1px solid rgba(196,80,80,0.25); border-radius: 10px;
+  font-family: 'Quicksand', sans-serif; font-size: 13px;
+  font-weight: 700; cursor: pointer; margin-top: 8px;
+}
+
+/* ══════════════════════════════════════
+   RITUAL DETAIL PAGE
+══════════════════════════════════════ */
+.ritual-mini {
+  background: rgba(212,144,58,0.08);
+  border: 1px solid rgba(212,144,58,0.2);
+  border-radius: var(--radius-sm);
+  padding: 13px 15px; margin: 0 14px 14px;
+}
+.ritual-mini .rm-label {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--gold); font-weight: 600; margin-bottom: 5px;
+}
+.ritual-mini .rm-text { font-size: 13px; color: var(--ink2); line-height: 1.6; }
+
+.wheel-item {
+  display: flex; align-items: center; gap: 14px;
+  padding: 12px 18px; border-bottom: 1px solid var(--border);
+}
+.wheel-item:last-child { border-bottom: none; }
+.wheel-icon { font-size: 24px; flex-shrink: 0; }
+.wheel-info { flex: 1; }
+.wheel-name {
+  font-family: 'Libre Baskerville', serif;
+  font-size: 15px; color: var(--ink); margin-bottom: 2px;
+}
+.wheel-desc { font-size: 11px; color: var(--muted); font-weight: 500; }
+.wheel-when {
+  font-size: 11px; font-weight: 600; text-align: right; white-space: nowrap;
+}
+.wheel-when.soon { color: var(--gold); }
+.wheel-when.today-w { color: var(--ember); }
+.wheel-when.past { color: var(--faint); }
+
+/* freq badge */
+.fbadge {
+  font-size: 10px; color: var(--muted);
+  background: rgba(255,255,255,0.05);
+  padding: 2px 8px; border-radius: 8px;
+  border: 1px solid var(--border2); font-weight: 600;
+}
+
+/* Status line */
+.status-line {
+  padding: 10px 18px; font-size: 12px; color: var(--muted);
+  border-top: 1px solid var(--border); font-style: italic;
+}
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════
+  PAGE: DAG
+════════════════════════════════════ -->
+<div class="page active z1" id="page-dag">
+
+  <div class="header z1">
+    <div class="header-row">
+      <div>
+        <div class="greeting" id="greeting">Goedemorgen</div>
+        <div class="date-str" id="date-str">—</div>
+      </div>
+      <div class="season-chip" id="season-chip">🌱 Lente</div>
+    </div>
+  </div>
+
+  <div class="energy-wrap z1">
+    <div class="eyebrow">Hoe voel je je vandaag?</div>
+    <div class="energy-row">
+      <button class="ebtn" data-e="groen" onclick="setEnergy('groen')">
+        <div class="dot"></div><div class="elabel">Vol energie</div>
+      </button>
+      <button class="ebtn" data-e="geel" onclick="setEnergy('geel')">
+        <div class="dot"></div><div class="elabel">Redelijk</div>
+      </button>
+      <button class="ebtn" data-e="oranje" onclick="setEnergy('oranje')">
+        <div class="dot"></div><div class="elabel">Weinig</div>
+      </button>
+      <button class="ebtn" data-e="rood" onclick="setEnergy('rood')">
+        <div class="dot"></div><div class="elabel">Rustdag</div>
+      </button>
+    </div>
+    <div class="ehint" id="ehint"></div>
+  </div>
+
+  <div class="scroll z1">
+
+    <!-- Maan & seizoen mini -->
+    <div class="card" onclick="navTo('ritueel', document.querySelectorAll('.nbtn')[2])">
+      <div class="card-head">
+        <span class="card-title">✦ Seizoen & Maan</span>
+        <span style="font-size:12px;color:var(--muted)">→</span>
+      </div>
+      <div class="ritual-tiles" id="ritual-mini-tiles"></div>
+    </div>
+
+    <!-- Agenda -->
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">Vandaag</span>
+        <button class="card-btn" onclick="refreshCal()">↻ Verversen</button>
+      </div>
+      <div id="cal-area"></div>
+    </div>
+
+    <!-- Taken vandaag -->
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">Taken</span>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="card-count" id="task-count">—</span>
+          <button class="card-btn" id="done-toggle-btn" onclick="toggleDoneVisible()">Verberg ✓</button>
+        </div>
+      </div>
+      <div id="task-list"></div>
+      <div class="add-row">
+        <input class="add-inp" id="new-task" placeholder="Taak toevoegen…" onkeydown="if(event.key==='Enter')addTask()">
+        <select class="esel" id="new-task-e">
+          <option value="groen">🟢</option>
+          <option value="geel" selected>🟡</option>
+          <option value="oranje">🟠</option>
+          <option value="rood">🔴</option>
+        </select>
+        <button class="add-circ" onclick="openNewTaskModal()">+</button>
+      </div>
+    </div>
+
+    <!-- Terugkerend -->
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">Terugkerend</span>
+        <button class="card-btn" onclick="openM('m-rec')">+ Nieuw</button>
+      </div>
+      <div class="tabs">
+        <div class="tab active" onclick="switchTab(this,'dag')">Dagelijks</div>
+        <div class="tab" onclick="switchTab(this,'week')">Wekelijks</div>
+        <div class="tab" onclick="switchTab(this,'maand')">Maandelijks</div>
+      </div>
+      <div class="tpane active" id="tp-dag"></div>
+      <div class="tpane" id="tp-week"></div>
+      <div class="tpane" id="tp-maand"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+  PAGE: MASTERLIJST
+════════════════════════════════════ -->
+<div class="page z1" id="page-master">
+
+  <div class="header z1">
+    <div class="header-row">
+      <div>
+        <div class="greeting" style="font-size:22px">Masterlijst</div>
+        <div class="date-str">Alles wat ooit moet</div>
+      </div>
+      <button class="card-btn" style="margin-top:4px" onclick="openM('m-back')">+ Toevoegen</button>
+    </div>
+  </div>
+
+  <div class="scroll z1">
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">Vandaag & gepland</span>
+        <span class="card-count" id="planned-count">—</span>
+      </div>
+      <div id="planned-list"></div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">Backlog</span>
+        <span class="card-count" id="backlog-count">—</span>
+      </div>
+      <div id="backlog-list"></div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">Afgerond</span>
+        <button class="card-btn" onclick="clearDoneBacklog()">Wissen</button>
+      </div>
+      <div id="done-backlog-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+  PAGE: RITUEEL
+════════════════════════════════════ -->
+<div class="page z1" id="page-ritueel">
+
+  <div class="header z1">
+    <div class="header-row">
+      <div>
+        <div class="greeting" style="font-size:22px">Seizoen & Ritueel</div>
+      </div>
+    </div>
+    <div class="tabs" style="margin:10px -18px -14px;padding:0 18px">
+      <div class="tab active" onclick="switchRitTab(this,'seizoen')">Seizoen</div>
+      <div class="tab" onclick="switchRitTab(this,'reading')">Reading</div>
+      <div class="tab" onclick="switchRitTab(this,'archief')">Archief</div>
+    </div>
+  </div>
+
+  <div class="scroll z1 rit-pane active" id="ritueel-scroll"></div>
+
+  <div class="scroll z1 rit-pane" id="reading-scroll" style="display:none"></div>
+
+  <div class="scroll z1 rit-pane" id="archief-scroll" style="display:none">
+    <div class="card" style="margin-top:14px">
+      <div class="card-head">
+        <span class="card-title">Eerdere readings</span>
+        <span class="card-count" id="archief-count">0</span>
+      </div>
+      <div id="archief-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+  PAGE: INSTELLINGEN
+════════════════════════════════════ -->
+<div class="page z1" id="page-inst">
+
+  <div class="header z1">
+    <div class="header-row">
+      <div><div class="greeting" style="font-size:22px">Instellingen</div></div>
+    </div>
+  </div>
+
+  <div class="scroll z1">
+    <div class="card">
+      <div class="card-head"><span class="card-title">Google Calendar</span></div>
+      <div class="sfield">
+        <label>API Sleutel</label>
+        <input id="cal-api-key-input" placeholder="AIza…">
+        <label style="margin-top:10px;display:block">Agenda-ID</label>
+        <input id="cal-id-input" placeholder="jouwnaam@gmail.com">
+        <button class="sbtn" style="margin-top:10px" onclick="saveCalApi()">Opslaan & laden</button>
+        <div id="cal-status" style="font-size:12px;color:var(--muted);margin-top:8px;"></div>
+        <div style="font-size:11px;color:var(--faint);margin-top:6px;">Sleutel en agenda-ID worden alleen lokaal op dit apparaat opgeslagen.</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px;">
+      <div class="card-head"><span class="card-title">Google Drive Sync</span></div>
+      <div class="sfield">
+        <label>Client ID</label>
+        <input id="drive-client-id-input" placeholder="….apps.googleusercontent.com">
+        <button class="sbtn" style="margin-top:10px" id="drive-connect-btn" onclick="connectDrive()">Verbinden met Google</button>
+        <button class="sbtn" style="margin-top:10px;display:none" id="drive-disconnect-btn" onclick="disconnectDrive()">Verbinding verbreken</button>
+        <button class="sbtn" style="margin-top:8px;display:none" id="drive-sync-btn" onclick="syncFromDrive()">↻ Nu synchroniseren</button>
+        <div id="drive-status" style="font-size:12px;color:var(--muted);margin-top:8px;"></div>
+        <div style="font-size:11px;color:var(--faint);margin-top:6px;">Data wordt opgeslagen in de verborgen appmap van je Google Drive. Alleen dit dashboard heeft er toegang toe.</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px;">
+      <div class="card-head"><span class="card-title">Data</span></div>
+      <div class="sfield">
+        <div style="font-size:13px;color:var(--muted);margin-bottom:10px;">Exporteer je gegevens als backup vóór een update, of importeer een eerdere backup.</div>
+        <button class="sbtn" onclick="exportData()">⬇ Exporteer backup</button>
+        <button class="sbtn" style="margin-top:8px" onclick="document.getElementById('import-file').click()">⬆ Importeer backup</button>
+        <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+        <div id="import-status" style="font-size:12px;color:var(--muted);margin-top:6px;"></div>
+        <div style="border-top:1px solid var(--border);margin:14px 0;"></div>
+        <button class="sbtn" onclick="resetToday()">Dag resetten</button>
+        <button class="danger-btn" onclick="clearAll()">Alles wissen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+  BOTTOM NAV
+════════════════════════════════════ -->
+<div class="bnav z1">
+  <button class="nbtn active" onclick="navTo('dag',this)">
+    <div class="nicon">☀️</div><div class="nlabel">Dag</div>
+  </button>
+  <button class="nbtn" onclick="navTo('master',this)">
+    <div class="nicon">📋</div><div class="nlabel">Lijst</div>
+  </button>
+  <button class="nbtn" onclick="navTo('ritueel',this)">
+    <div class="nicon">✦</div><div class="nlabel">Ritueel</div>
+  </button>
+  <button class="nbtn" onclick="navTo('inst',this)">
+    <div class="nicon">⚙️</div><div class="nlabel">Instellingen</div>
+  </button>
+</div>
+
+<!-- ════════════════════════════════════
+  MODALS
+════════════════════════════════════ -->
+
+<!-- Recurring -->
+<div class="moverlay" id="m-rec" onclick="closeM(event,'m-rec')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Terugkerende taak</div>
+    <div class="mfield"><label>Naam</label><input id="r-name" placeholder="Bijv. Keuken resetten"></div>
+    <div class="mfield"><label>Frequentie</label>
+      <select id="r-freq">
+        <option value="dag">Dagelijks</option>
+        <option value="week">Wekelijks</option>
+        <option value="maand">Maandelijks</option>
+      </select>
+    </div>
+    <div class="mfield"><label>Energieniveau nodig</label>
+      <select id="r-energy">
+        <option value="rood">🔴 Laag — ook op rustdagen</option>
+        <option value="oranje">🟠 Beetje — als je weinig hebt</option>
+        <option value="geel" selected>🟡 Gemiddeld — redelijke dag</option>
+        <option value="groen">🟢 Hoog — alleen op goede dagen</option>
+      </select>
+    </div>
+    <div class="mactions">
+      <button class="mbtn-c" onclick="closeM(null,'m-rec')">Annuleren</button>
+      <button class="mbtn-p" onclick="saveRec()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Backlog item -->
+<div class="moverlay" id="m-back" onclick="closeM(event,'m-back')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Taak toevoegen</div>
+    <div class="mfield"><label>Taak</label><input id="b-name" placeholder="Bijv. Huisarts bellen"></div>
+    <div class="mfield"><label>Datum (optioneel — laat leeg voor backlog)</label>
+      <input id="b-date" type="date">
+    </div>
+    <div class="mfield"><label>Energieniveau</label>
+      <select id="b-energy">
+        <option value="rood">🔴 Laag</option>
+        <option value="oranje">🟠 Beetje</option>
+        <option value="geel" selected>🟡 Gemiddeld</option>
+        <option value="groen">🟢 Hoog</option>
+      </select>
+    </div>
+    <div class="mactions">
+      <button class="mbtn-c" onclick="closeM(null,'m-back')">Annuleren</button>
+      <button class="mbtn-p" onclick="saveBack()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Nieuwe taak (volledig) -->
+<div class="moverlay" id="m-new-task" onclick="closeM(event,'m-new-task')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Nieuwe taak</div>
+    <div class="mfield"><label>Naam</label><input id="nt-name" placeholder="Taaknaam"></div>
+    <div class="mfield"><label>Energie</label>
+      <select id="nt-energy">
+        <option value="groen">🟢 Hoog</option>
+        <option value="geel" selected>🟡 Gemiddeld</option>
+        <option value="oranje">🟠 Weinig</option>
+        <option value="rood">🔴 Laag</option>
+      </select>
+    </div>
+    <div class="mfield"><label>Duur (minuten, optioneel)</label><input id="nt-duur" type="number" min="1" placeholder="bijv. 30"></div>
+    <div class="mfield"><label>Deadline (optioneel)</label><input id="nt-deadline" type="date"></div>
+    <div class="mactions">
+      <button class="mbtn-c" onclick="closeM(null,'m-new-task')">Annuleren</button>
+      <button class="mbtn-p" onclick="saveNewTask()">Toevoegen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit terugkerende taak -->
+<div class="moverlay" id="m-edit-rec" onclick="closeM(event,'m-edit-rec')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Taak bewerken</div>
+    <input type="hidden" id="edit-rec-id">
+    <div class="mfield"><label>Naam</label><input id="edit-rec-name" placeholder="Naam"></div>
+    <div class="mfield"><label>Energie</label>
+      <select id="edit-rec-energy">
+        <option value="groen">🟢 Hoog</option>
+        <option value="geel">🟡 Gemiddeld</option>
+        <option value="oranje">🟠 Weinig</option>
+        <option value="rood">🔴 Laag</option>
+      </select>
+    </div>
+    <div class="mfield"><label>Frequentie</label>
+      <select id="edit-rec-freq">
+        <option value="dag">Dagelijks</option>
+        <option value="week">Wekelijks</option>
+        <option value="maand">Maandelijks</option>
+      </select>
+    </div>
+    <div class="mactions">
+      <button class="mbtn-c" onclick="closeM(null,'m-edit-rec')">Annuleren</button>
+      <button class="mbtn-p" onclick="saveEditRec()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit taak -->
+<div class="moverlay" id="m-edit" onclick="closeM(event,'m-edit')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Taak bewerken</div>
+    <input type="hidden" id="edit-task-id">
+    <div class="mfield"><label>Naam</label><input id="edit-name" placeholder="Taaknaam"></div>
+    <div class="mfield"><label>Energie</label>
+      <select id="edit-energy">
+        <option value="groen">🟢 Hoog</option>
+        <option value="geel">🟡 Gemiddeld</option>
+        <option value="oranje">🟠 Weinig</option>
+        <option value="rood">🔴 Laag</option>
+      </select>
+    </div>
+    <div class="mfield"><label>Duur (minuten, optioneel)</label><input id="edit-duur" type="number" min="1" placeholder="bijv. 30"></div>
+    <div class="mfield"><label>Deadline (optioneel)</label><input id="edit-deadline" type="date"></div>
+    <div class="mactions">
+      <button class="mbtn-c" onclick="closeM(null,'m-edit')">Annuleren</button>
+      <button class="mbtn-p" onclick="saveEditTask()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reading detail modal -->
+<div class="moverlay" id="m-reading-detail" onclick="closeM(event,'m-reading-detail')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div id="reading-detail-content"></div>
+    <div class="mactions">
+      <button class="mbtn-c" onclick="closeM(null,'m-reading-detail')">Sluiten</button>
+      <button class="mbtn-p" style="background:rgba(196,80,80,0.7)" onclick="deleteReading()">Verwijderen</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════
+const ERANK = {groen:4,geel:3,oranje:2,rood:1};
+
+function today(){ return new Date().toISOString().slice(0,10); }
+
+function gs(){ try{ return JSON.parse(localStorage.getItem('mijndag_v3')||'{}'); }catch{ return {}; } }
+function ss(s){
+  localStorage.setItem('mijndag_v3',JSON.stringify(s));
+  localStorage.setItem('mijndag_ts',Date.now());
+  if(_driveToken){ clearTimeout(_syncTimer); _syncTimer=setTimeout(pushToDrive,2000); }
+}
+
+function getS(){
+  const s=gs();
+  if(!s.tasks)     s.tasks=[];
+  if(!s.recurring) s.recurring=defaultRec();
+  if(!s.energy)    s.energy={};
+  if(!s.doneTasks) s.doneTasks={};
+  if(!s.doneRec)   s.doneRec={};
+  if(!s.backlog)   s.backlog=[];
+  if(!s.calUrl)    s.calUrl='';
+  return s;
+}
+
+function defaultRec(){
+  return [
+    {id:'r1',name:'Keuken resetten',freq:'dag',energy:'rood'},
+    {id:'r2',name:'Volgende dag voorbereiden',freq:'dag',energy:'geel'},
+    {id:'r3',name:'Even naar buiten',freq:'dag',energy:'rood'},
+    {id:'r4',name:'WC schoonmaken',freq:'week',energy:'geel'},
+    {id:'r5',name:'Grote boodschappen',freq:'week',energy:'geel'},
+    {id:'r6',name:'Planten water geven',freq:'week',energy:'rood'},
+    {id:'r7',name:'Badkamer schoonmaken',freq:'maand',energy:'groen'},
+    {id:'r8',name:'Lakens wassen',freq:'maand',energy:'geel'},
+  ];
+}
+
+// ════════════════════════════════════════════════════════
+// NAV
+// ════════════════════════════════════════════════════════
+function navTo(page, btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  if(btn) btn.classList.add('active');
+  if(page==='ritueel') renderRitueelPage();
+  if(page==='master')  renderMaster();
+  if(page==='inst'){
+    const s=getS();
+    const ki=document.getElementById('cal-api-key-input');
+    const ii=document.getElementById('cal-id-input');
+    if(ki) ki.value=s.calApiKey||'';
+    if(ii) ii.value=s.calId||'';
+    const di=document.getElementById('drive-client-id-input');
+    if(di) di.value=getDriveCID();
+    updateDriveUI();
+  }
+  window.scrollTo(0,0);
+}
+
+// ════════════════════════════════════════════════════════
+// HEADER
+// ════════════════════════════════════════════════════════
+function initHeader(){
+  const now=new Date();
+  const h=now.getHours();
+  const g=h<6?'Goedenacht':h<12?'Goedemorgen':h<18?'Goedemiddag':'Goedenavond';
+  document.getElementById('greeting').textContent=g;
+  const days=['zondag','maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag'];
+  const months=['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
+  document.getElementById('date-str').textContent=
+    `${days[now.getDay()]} ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+  const m=now.getMonth();
+  const seasons=[[11,0,1,'❄️ Winter'],[2,3,4,'🌱 Lente'],[5,6,7,'☀️ Zomer'],[8,9,10,'🍂 Herfst']];
+  for(const [a,b,c,l] of seasons){
+    if([a,b,c].includes(m)){ document.getElementById('season-chip').textContent=l; break; }
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// ENERGY
+// ════════════════════════════════════════════════════════
+let curE=null;
+const EHINTS={
+  groen: '🟢 Vol energie — alles staat voor je open',
+  geel:  '🟡 Redelijk — gemiddelde en lichte taken',
+  oranje:'🟠 Weinig energie — alleen lichte taken vooraan',
+  rood:  '🔴 Rustdag — alleen kerntaken en zelfzorg'
+};
+
+function setEnergy(lvl){
+  curE=lvl;
+  const s=getS(); s.energy[today()]=lvl; ss(s);
+  document.querySelectorAll('.ebtn').forEach(b=>b.classList.remove('active'));
+  document.querySelector(`.ebtn[data-e="${lvl}"]`).classList.add('active');
+  const h=document.getElementById('ehint');
+  h.textContent=EHINTS[lvl]; h.className=`ehint visible ${lvl}`;
+  renderTasks(); renderRec();
+}
+
+function fits(te,ce){ if(!ce) return true; return ERANK[te]<=ERANK[ce]; }
+
+// ════════════════════════════════════════════════════════
+// MOON & SABBATS
+// ════════════════════════════════════════════════════════
+function moonPhase(date){
+  const syn=29.53058867;
+  const known=new Date(2000,0,6,18,14,0);
+  const diff=(date-known)/(86400000);
+  const phase=((diff%syn)+syn)%syn;
+  if(phase<1.85)  return {name:'Nieuwe Maan',icon:'🌑',age:phase};
+  if(phase<7.38)  return {name:'Wassende maan',icon:'🌒',age:phase};
+  if(phase<9.22)  return {name:'Eerste kwartier',icon:'🌓',age:phase};
+  if(phase<14.77) return {name:'Bijna vol',icon:'🌔',age:phase};
+  if(phase<16.61) return {name:'Volle Maan',icon:'🌕',age:phase};
+  if(phase<22.15) return {name:'Afnemende maan',icon:'🌖',age:phase};
+  if(phase<23.99) return {name:'Laatste kwartier',icon:'🌗',age:phase};
+  return              {name:'Bijna nieuw',icon:'🌘',age:phase};
+}
+
+function getSabbats(year){
+  return [
+    {name:'Imbolc',     date:new Date(year,1,1),   icon:'🕯️',desc:'Eerste licht, voorbode van lente'},
+    {name:'Ostara',     date:new Date(year,2,20),  icon:'🌸',desc:'Lente-equinox, dag en nacht in balans'},
+    {name:'Beltane',    date:new Date(year,4,1),   icon:'🔥',desc:'Vuur en leven, begin van de zomer'},
+    {name:'Litha',      date:new Date(year,5,21),  icon:'☀️',desc:'Zomerzonnewende, langste dag'},
+    {name:'Lughnasadh', date:new Date(year,7,1),   icon:'🌾',desc:'Eerste oogst, vruchten van je werk'},
+    {name:'Mabon',      date:new Date(year,8,22),  icon:'🍂',desc:'Herfst-equinox, dankbaarheid'},
+    {name:'Samhain',    date:new Date(year,9,31),  icon:'🎃',desc:'Sluier wordt dun, eer je voorouders'},
+    {name:'Yule',       date:new Date(year,11,21), icon:'❄️',desc:'Wintersonnewende, het licht keert terug'},
+    {name:'Imbolc',     date:new Date(year+1,1,1), icon:'🕯️',desc:'Eerste licht, voorbode van lente'},
+  ];
+}
+
+function daysUntil(d){
+  const n=new Date(); n.setHours(0,0,0,0);
+  const t=new Date(d); t.setHours(0,0,0,0);
+  return Math.round((t-n)/86400000);
+}
+
+function getNextSabbat(){
+  const now=new Date(); now.setHours(0,0,0,0);
+  return getSabbats(now.getFullYear()).find(s=>s.date>=now)||getSabbats(now.getFullYear()).at(-1);
+}
+
+function getCurrentSabbat(){
+  const now=new Date(); now.setHours(0,0,0,0);
+  const all=getSabbats(now.getFullYear());
+  let cur=all[0];
+  for(const s of all){ if(s.date<=now) cur=s; }
+  return cur;
+}
+
+// Returns most relevant sabbat: recent past (<=14 days ago) or next upcoming
+function getMostRelevantSabbat(){
+  const now=new Date(); now.setHours(0,0,0,0);
+  const all=getSabbats(now.getFullYear());
+  // Find most recent past sabbat
+  let last=null;
+  for(const s of all){ if(s.date<=now) last=s; }
+  // If within 14 days, show it
+  if(last){
+    const daysSince=Math.round((now-last.date)/86400000);
+    if(daysSince<=14) return {sabbat:last, daysSince, isPast:true};
+  }
+  // Otherwise show next
+  const next=all.find(s=>s.date>now)||all.at(-1);
+  const daysUntilNext=Math.round((next.date-now)/86400000);
+  return {sabbat:next, daysSince:null, daysUntil:daysUntilNext, isPast:false};
+}
+
+const MOON_MEANING={
+  'Nieuwe Maan':      {txt:'Tijd voor nieuwe intenties. Plant zaden — van ideeën, wensen, verandering.',ritual:'Schrijf één intentie op. Laat hem rusten.'},
+  'Wassende maan':    {txt:'Energie bouwt op. Momentum is er — gebruik het.',ritual:'Begin iets kleins dat je al uitstelt.'},
+  'Eerste kwartier':  {txt:'Actie en wrijving. Obstakels komen omhoog om aangepakt te worden.',ritual:'Twintig minuten aan iets dat je vermijdt.'},
+  'Bijna vol':        {txt:'Verfijnen. Evalueer wat je begonnen bent.',ritual:'Check je intenties van de nieuwe maan.'},
+  'Volle Maan':       {txt:'Culminatie. Emoties zijn intenser — voel het gewoon.',ritual:'Even naar buiten kijken naar de maan.'},
+  'Afnemende maan':   {txt:'Dankbaarheid en delen. Wat heb je geoogst?',ritual:'Drie dingen opschrijven waarvoor je dankbaar bent.'},
+  'Laatste kwartier': {txt:'Loslaten. Tijd om te ontdoen wat je niet meer dient.',ritual:'Eén ding weggeven, weggooien of mentaal afsluiten.'},
+  'Bijna nieuw':      {txt:'Rust en integratie. Trek je terug en laad op.',ritual:'Vroeg naar bed. Nee zeggen is ook een ritueel.'},
+};
+
+function renderRitualMini(){
+  const moon=moonPhase(new Date());
+  const relevant=getMostRelevantSabbat();
+  const cur=getCurrentSabbat();
+  const relS=relevant.sabbat;
+  const duLabel=relevant.isPast
+    ? (relevant.daysSince===0?'Vandaag':relevant.daysSince===1?'Gisteren':`${relevant.daysSince} dagen geleden`)
+    : (relevant.daysUntil===0?'Vandaag':relevant.daysUntil===1?'Morgen':`Over ${relevant.daysUntil} dagen`);
+  document.getElementById('ritual-mini-tiles').innerHTML=`
+    <div class="rtile">
+      <div class="ricon">${moon.icon}</div>
+      <div class="rlabel">Maanfase</div>
+      <div class="rval">${moon.name}</div>
+      <div class="rsub">Dag ${Math.floor(moon.age)+1}</div>
+    </div>
+    <div class="rtile">
+      <div class="ricon">${relS.icon}</div>
+      <div class="rlabel">Sabbat</div>
+      <div class="rval">${relS.name}</div>
+      <div class="rsub">${duLabel}</div>
+    </div>
+    <div class="rtile wide">
+      <div class="rlabel">Seizoen van</div>
+      <div class="rval">${cur.icon} ${cur.name} — ${cur.desc}</div>
+    </div>`;
+}
+
+function getCurrentMicroSeason() {
+  const now = new Date();
+  const m = now.getMonth();
+  const d = now.getDate();
+  const MICRO = [
+    {name:'Begin van de lente',theme:'Ontwaken',sm:2,sd:21,em:3,ed:19,icon:'🌱',
+     sfeer:'De wereld begint te roeren. Iets in jou ook — een verlangen dat nog geen naam heeft, maar zich aandient. Dit is het moment van het eerste ademhalen na de winter.',
+     reflectie:'Wat wil er in jou dit seizoen tot leven komen? Niet wat moet — wat wil.',
+     natuur:'Kijk naar knoppen, vroege bloemen, langere avonden.'},
+    {name:'Midden van de lente',theme:'Verwachting',sm:3,sd:20,em:4,ed:20,icon:'🌸',
+     sfeer:'De energie is op haar sterkst. Alles om je heen groeit en bloeit alsof het niet anders kan. Jij mag dat ook — volledig, zonder te vragen of het wel mag.',
+     reflectie:'Waar houd je jezelf klein? Wat zou er groeien als je het ruimte gaf?',
+     natuur:'Vogels bouwen nesten. Meidoorn bloeit. Alles is druk bezig.'},
+    {name:'Einde van de lente',theme:'Verandering',sm:4,sd:21,em:5,ed:20,icon:'🦋',
+     sfeer:'De lente bereidt haar vertrek voor. Verandering zit in de lucht — niet als verlies, maar als doorgang. Wat klaar is om te verschuiven, mag nu verschuiven.',
+     reflectie:'Wat heeft zijn werk gedaan en mag worden losgelaten? Wat is er gegroeid dat je nog niet hebt erkend?',
+     natuur:'Bloesem valt. Bladeren worden voller, groener. De zomer wacht.'},
+    {name:'Begin van de zomer',theme:'Kansen',sm:5,sd:21,em:6,ed:22,icon:'☀️',
+     sfeer:'Het licht is volop aanwezig. Dit is het seizoen van durven — van je gezicht naar de zon keren en ja zeggen tegen wat zich aandient.',
+     reflectie:'Welke kans ligt er voor je die je nog niet hebt gegrepen? Wat houdt je tegen?',
+     natuur:'Langste dagen. Warmte. Alles staat vol in bloei.'},
+    {name:'Midden van de zomer',theme:'Overvloed',sm:6,sd:23,em:7,ed:22,icon:'🌻',
+     sfeer:'De aarde geeft haar rijkdom. Dit is het seizoen om te ontvangen — niet alleen wat buiten je is, maar ook wat je zelf hebt gecreëerd. Sta stil bij wat er al is.',
+     reflectie:'Waar is er overvloed in je leven, ook al zie je het misschien niet direct? Wat ben je dankbaar voor?',
+     natuur:'Fruit rijpt. Bijen. Warme avonden die lang duren.'},
+    {name:'Einde van de zomer',theme:'Terugkeren naar jezelf',sm:7,sd:23,em:8,ed:21,icon:'🌾',
+     sfeer:'De eerste tekenen van de herfst dienen zich aan. De energie trekt zich langzaam terug. Een goed moment om te checken: ben je nog op het spoor dat jij wilt?',
+     reflectie:'Wat heeft dit seizoen je geleerd over wie je bent? Waar ben je van afgeweken — en wil je terugkeren?',
+     natuur:'Eerste bladkleuring. Oogst. Avonden worden eerder donker.'},
+    {name:'Begin van de herfst',theme:'Dankbaarheid',sm:8,sd:22,em:9,ed:22,icon:'🍂',
+     sfeer:'De aarde oogst wat ze heeft gezaaid. Jij ook. Dit seizoen vraagt om stil te staan bij wat je hebt ontvangen, gemaakt, geleerd — ook de kleine dingen.',
+     reflectie:'Wat heeft dit jaar je gebracht dat je nog niet hebt erkend? Aan wie of wat ben je dankbaar?',
+     natuur:'Bladeren verkleuren. Vruchten. Mist in de ochtend.'},
+    {name:'Midden van de herfst',theme:'Transformatie',sm:9,sd:23,em:10,ed:21,icon:'🔮',
+     sfeer:'De sluier wordt dunner. Dit is het diepste seizoen van transformatie — wat niet meer dient, mag worden omgezet. Alchemie van verlies naar iets nieuws.',
+     reflectie:'Wat wil er in jou veranderen? Wat ben je bereid los te laten om ruimte te maken voor wie je wordt?',
+     natuur:'Bladeren vallen. De aarde trekt zich terug. Samhain nadert.'},
+    {name:'Einde van de herfst',theme:'Naar binnen keren',sm:10,sd:22,em:11,ed:20,icon:'🌫️',
+     sfeer:'De natuur trekt zich terug. Jij ook, als je het toestaat. Dit is niet de tijd voor grote bewegingen — maar voor stille aanwezigheid bij jezelf. Rust is geen leegte.',
+     reflectie:'Hoe uitgenodigd voel jij je om rust te nemen? Wat maakt het moeilijk om naar binnen te keren?',
+     natuur:'Kale bomen. Korte dagen. Stilte die dieper wordt.'},
+    {name:'Begin van de winter',theme:'Licht zoeken',sm:11,sd:21,em:11,ed:19,icon:'🕯️',
+     sfeer:'De langste nachten. Maar ook: het licht dat we zelf aansteken. De winter vraagt niet om produceren — maar om te zoeken wat ons van binnenuit verwarmt.',
+     reflectie:'Wat geeft jou innerlijk licht in deze donkere tijd? Waar vind je warmte als alles stil is?',
+     natuur:'Vorst. Sterren. Kaarsen. Yule nadert.'},
+    {name:'Midden van de winter',theme:'Dromen en groeien',sm:11,sd:20,em:0,ed:18,icon:'❄️',
+     sfeer:'Onder de bevroren aarde groeien de zaden al. Niets is zichtbaar — maar er wordt gewerkt. Dit is het seizoen van dromen: niet plannen, maar verbeelden.',
+     reflectie:'Als er geen beperkingen waren — wat zou je leven er dan uitzien? Wat droomt er in jou?',
+     natuur:'Sneeuw of regen. Stilte. De zon begint na Yule langzaam terug te keren.'},
+    {name:'Einde van de winter',theme:'Afsluiten en opnieuw beginnen',sm:0,sd:19,em:2,ed:20,icon:'🌿',
+     sfeer:'Het einde van de cyclus — en de voorbode van de volgende. Er is iets in de lucht dat nog niet te zien is, maar al voelbaar. Imbolc fluistert: er komt nieuw leven.',
+     reflectie:'Wat wil je afsluiten voordat het nieuwe jaar begint? Wat neem je mee, en wat laat je achter?',
+     natuur:'Eerste sneeuwklokjes. Licht dat eerder komt. Een voorzichtige hoop.'},
+  ];
+  // Return the right micro-season based on today
+  const now2 = new Date(now.getFullYear(), m, d);
+  for (const ms of MICRO) {
+    const s = new Date(now.getFullYear(), ms.sm, ms.sd);
+    let e = new Date(now.getFullYear(), ms.em, ms.ed);
+    if (ms.em < ms.sm) e = new Date(now.getFullYear()+1, ms.em, ms.ed);
+    if (now2 >= s && now2 <= e) return ms;
+  }
+  return MICRO[11];
+}
+
+function renderRitueelPage(){
+  const moon = moonPhase(new Date());
+  const now = new Date(); now.setHours(0,0,0,0);
+  const sabbats = getSabbats(now.getFullYear());
+  const relevant = getMostRelevantSabbat();
+  const micro = getCurrentMicroSeason();
+  const mm = MOON_MEANING[moon.name] || {txt:'',ritual:''};
+
+  const wheelRows = sabbats.slice(0,-1).map(s => {
+    const du = daysUntil(s.date);
+    const isPast = du < 0;
+    const cls = du===0 ? 'today-w' : du>0&&du<=21 ? 'soon' : 'past';
+    const label = du===0 ? '✦ Vandaag' : du>0 ? `Over ${du} dagen` : `${Math.abs(du)} dagen geleden`;
+    return `<div class="wheel-item" style="opacity:${isPast&&du<-45?0.35:1}">
+      <div class="wheel-icon">${s.icon}</div>
+      <div class="wheel-info">
+        <div class="wheel-name">${s.name}</div>
+        <div class="wheel-desc">${s.desc}</div>
+      </div>
+      <div class="wheel-when ${cls}">${label}</div>
+    </div>`;
+  }).join('');
+
+  const nextSabbat = relevant.sabbat;
+  const sabbatLabel = relevant.isPast
+    ? (relevant.daysSince===0 ? 'Vandaag' : relevant.daysSince===1 ? 'Gisteren' : `${relevant.daysSince} dagen geleden`)
+    : (relevant.daysUntil===0 ? 'Vandaag' : relevant.daysUntil===1 ? 'Morgen' : `Over ${relevant.daysUntil} dagen`);
+  const sabbatColor = relevant.isPast ? 'var(--muted)' : 'var(--gold)';
+
+  document.getElementById('ritueel-scroll').innerHTML = `
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">${micro.icon} ${micro.name}</span>
+        <span style="font-size:11px;color:var(--muted);font-style:italic">${micro.theme}</span>
+      </div>
+      <div style="padding:14px 18px 4px">
+        <div style="font-size:14px;color:var(--ink2);line-height:1.75;margin-bottom:14px">${micro.sfeer}</div>
+      </div>
+      <div class="ritual-mini" style="margin:0 14px 8px">
+        <div class="rm-label">Wat te zien in de natuur</div>
+        <div class="rm-text">${micro.natuur}</div>
+      </div>
+      <div class="ritual-mini" style="margin:0 14px 14px;background:rgba(139,94,139,0.08);border-color:rgba(139,94,139,0.2)">
+        <div class="rm-label" style="color:var(--dusk)">Reflectievraag</div>
+        <div class="rm-text" style="font-style:italic">${micro.reflectie}</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">${moon.icon} ${moon.name}</span>
+        <span style="font-size:11px;color:var(--muted)">Dag ${Math.floor(moon.age)+1}</span>
+      </div>
+      <div style="padding:14px 18px 4px">
+        <div style="font-size:14px;color:var(--ink2);line-height:1.7;margin-bottom:12px">${mm.txt}</div>
+      </div>
+      <div class="ritual-mini" style="margin:0 14px 14px">
+        <div class="rm-label">Mini-ritueel</div>
+        <div class="rm-text">${mm.ritual}</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">${nextSabbat.icon} ${nextSabbat.name}</span>
+        <span style="font-size:11px;color:${sabbatColor};font-weight:600">${sabbatLabel}</span>
+      </div>
+      <div style="padding:12px 18px 14px;font-size:13px;color:var(--ink2);line-height:1.65">${nextSabbat.desc}${relevant.isPast ? '<br><br><em style="font-size:12px;color:var(--muted)">Nog niet gevierd? Dat mag alsnog.</em>' : ''}</div>
+    </div>
+    <div class="card">
+      <div class="card-head"><span class="card-title">☀️ Wiel van het Jaar</span></div>
+      ${wheelRows}
+    </div>`;
+}
+
+
+// ════════════════════════════════════════════════════════
+// CALENDAR (Google Calendar API)
+// ════════════════════════════════════════════════════════
+async function refreshCal(){
+  const s=getS();
+  if(!s.calApiKey || !s.calId){ renderCalSetup(); return; }
+  document.getElementById('cal-area').innerHTML='<div class="cal-empty">Laden…</div>';
+  try{
+    const now = new Date();
+    const start = new Date(now); start.setHours(0,0,0,0);
+    const end   = new Date(now); end.setHours(23,59,59,999);
+    const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(s.calId)}/events?key=${s.calApiKey}&timeMin=${start.toISOString()}&timeMax=${end.toISOString()}&singleEvents=true&orderBy=startTime&maxResults=20`;
+    const res = await fetch(url);
+    if(!res.ok){
+      const err = await res.json();
+      throw new Error(err.error?.message || `HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    const events = (data.items||[]).map(e => ({
+      summary: e.summary || '(geen titel)',
+      time: e.start.dateTime
+        ? new Date(e.start.dateTime).toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})
+        : 'Hele dag',
+      sort: e.start.dateTime ? new Date(e.start.dateTime).getTime() : 0
+    })).sort((a,b)=>a.sort-b.sort);
+    renderCalEvents(events);
+    const st=getS(); st.calCache={date:today(),events}; ss(st);
+  }catch(err){
+    document.getElementById('cal-area').innerHTML=
+      `<div class="cal-empty">Kon agenda niet laden.<br><small style="color:var(--faint)">${err.message||'Onbekende fout'}</small></div>`;
+  }
+}
+
+function parseIcal(text,date){
+  const events=[];
+  const blocks=text.split('BEGIN:VEVENT');
+  for(let i=1;i<blocks.length;i++){
+    const b=blocks[i];
+    const summary=(b.match(/SUMMARY[^:]*:([^\r\n]+)/)||[])[1]||'(geen titel)';
+    const dtstart=(b.match(/DTSTART[^:]*:([^\r\n]+)/)||[])[1]||'';
+    if(!dtstart) continue;
+    const isAll=dtstart.length===8;
+    let ed;
+    if(isAll){ ed=new Date(`${dtstart.slice(0,4)}-${dtstart.slice(4,6)}-${dtstart.slice(6,8)}`); }
+    else{ try{ ed=new Date(dtstart.replace(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2}).*/,'$1-$2-$3T$4:$5:$6')); }catch{ continue; } }
+    const ts=new Date(date); ts.setHours(0,0,0,0);
+    const te=new Date(date); te.setHours(23,59,59,999);
+    if(ed>=ts&&ed<=te){
+      events.push({
+        summary:summary.trim(),
+        time:isAll?'Hele dag':ed.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'}),
+        sort:isAll?0:ed.getTime()
+      });
+    }
+  }
+  return events.sort((a,b)=>a.sort-b.sort);
+}
+
+function renderCalEvents(events){
+  if(!events.length){ document.getElementById('cal-area').innerHTML='<div class="cal-empty">Geen afspraken vandaag ✦</div>'; return; }
+  document.getElementById('cal-area').innerHTML=
+    events.map(e=>`<div class="cal-event">
+      <div class="cal-time">${e.time}</div>
+      <div class="cal-pip"></div>
+      <div class="cal-name">${e.summary}</div>
+    </div>`).join('');
+}
+
+function renderCalSetup(){
+  document.getElementById('cal-area').innerHTML=
+    '<div class="cal-empty">Nog geen agenda gekoppeld.<br>Ga naar <strong>Instellingen</strong> om je Google Calendar toe te voegen.</div>';
+}
+
+function saveCalApi(){
+  const key=document.getElementById('cal-api-key-input').value.trim();
+  const id=document.getElementById('cal-id-input').value.trim();
+  const s=getS(); s.calApiKey=key; s.calId=id; ss(s);
+  document.getElementById('cal-status').textContent=(key&&id)?'✓ Opgeslagen':'Vul beide velden in';
+  if(key&&id) refreshCal();
+}
+
+// ════════════════════════════════════════════════════════
+// TASKS (dagelijks, handmatig)
+// ════════════════════════════════════════════════════════
+function renderTasks(){
+  const s=getS(); const td=today(); const done=s.doneTasks[td]||[];
+  const list=document.getElementById('task-list');
+  list.innerHTML='';
+
+  // Also show backlog items due today
+  const todayBack=s.backlog.filter(b=>b.date===td&&!b.done);
+
+  if(!s.tasks.length&&!todayBack.length){
+    list.innerHTML='<div class="empty">Geen taken voor vandaag</div>';
+    document.getElementById('task-count').textContent='0';
+    return;
+  }
+
+  // Backlog items due today appear at top with a marker
+  todayBack.forEach(b=>{
+    const f=fits(b.energy,curE);
+    const div=document.createElement('div');
+    div.className='titem'+(f?'':' dimmed');
+    div.onclick=()=>toggleBack(b.id);
+    div.innerHTML=`
+      <div class="tchk"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+      <span class="tname">${b.name} <span style="font-size:10px;color:var(--gold);margin-left:4px">gepland</span></span>
+      <div class="epip ${b.energy}"></div>
+      <button class="delbtn" onclick="event.stopPropagation();deleteBack('${b.id}')">×</button>`;
+    list.appendChild(div);
+  });
+
+  s.tasks.forEach((t,i)=>{
+    const isDone=done.includes(t.id);
+    const f=fits(t.energy,curE);
+    const div=document.createElement('div');
+    div.className='titem'+(isDone?' done':'')+((!f&&!isDone)?' dimmed':'');
+    div.onclick=()=>toggleTask(t.id);
+    const td2=today();
+    const dlBadge=t.deadline?`<span class="bdate ${t.deadline<td2?'overdue':t.deadline===td2?'today-date':''}">${t.deadline===td2?'Vandaag':t.deadline<td2?'Te laat':formatDate(t.deadline)}</span>`:'';
+    const durBadge=t.duur?`<span class="dur-badge">${t.duur} min</span>`:'';
+    div.innerHTML=`
+      <div class="tchk"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+      <span class="tname">${t.name}</span>
+      ${dlBadge}${durBadge}
+      <div class="epip ${t.energy}"></div>
+      <button class="editbtn" onclick="event.stopPropagation();openEditTask('${t.id}')">✎</button>
+      <button class="delbtn" onclick="event.stopPropagation();deleteTask(${i})">×</button>`;
+    list.appendChild(div);
+  });
+
+  const doneCount=done.filter(id=>s.tasks.find(t=>t.id===id)).length;
+  const total=s.tasks.length+todayBack.length;
+  document.getElementById('task-count').textContent=`${doneCount}/${total}`;
+}
+
+function toggleTask(id){
+  const s=getS(); const td=today();
+  if(!s.doneTasks[td]) s.doneTasks[td]=[];
+  const arr=s.doneTasks[td]; const i=arr.indexOf(id);
+  if(i===-1) arr.push(id); else arr.splice(i,1);
+  ss(s); renderTasks();
+}
+
+function deleteTask(i){
+  const s=getS(); s.tasks.splice(i,1); ss(s); renderTasks();
+}
+
+function addTask(){
+  const inp=document.getElementById('new-task');
+  const name=inp.value.trim(); if(!name) return;
+  const energy=document.getElementById('new-task-e').value;
+  const s=getS();
+  s.tasks.push({id:'t'+Date.now(),name,energy});
+  ss(s); inp.value=''; renderTasks();
+}
+
+// ════════════════════════════════════════════════════════
+// RECURRING
+// ════════════════════════════════════════════════════════
+let activeTab='dag';
+
+function switchTab(el,tab){
+  activeTab=tab;
+  el.closest('.card').querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.closest('.card').querySelectorAll('.tpane').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tp-'+tab).classList.add('active');
+}
+
+function renderRec(){
+  const s=getS(); const td=today(); const done=s.doneRec[td]||[];
+  ['dag','week','maand'].forEach(freq=>{
+    const c=document.getElementById('tp-'+freq);
+    const items=s.recurring.filter(r=>r.freq===freq);
+    c.innerHTML='';
+    if(!items.length){ c.innerHTML='<div class="empty">Geen taken</div>'; return; }
+    items.forEach(r=>{
+      const isDone=done.includes(r.id);
+      const f=fits(r.energy,curE);
+      const div=document.createElement('div');
+      div.className='titem'+(isDone?' done':'')+((!f&&!isDone)?' dimmed':'');
+      div.onclick=()=>toggleRec(r.id);
+      div.innerHTML=`
+        <div class="tchk"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+        <span class="tname">${r.name}</span>
+        <div class="epip ${r.energy}"></div>
+        <button class="editbtn" onclick="event.stopPropagation();openEditRec('${r.id}')">✎</button>
+        <button class="delbtn" onclick="event.stopPropagation();deleteRec('${r.id}')">×</button>`;
+      c.appendChild(div);
+    });
+  });
+}
+
+function toggleRec(id){
+  const s=getS(); const td=today();
+  if(!s.doneRec[td]) s.doneRec[td]=[];
+  const arr=s.doneRec[td]; const i=arr.indexOf(id);
+  if(i===-1) arr.push(id); else arr.splice(i,1);
+  ss(s); renderRec();
+}
+
+function deleteRec(id){
+  const s=getS(); s.recurring=s.recurring.filter(r=>r.id!==id); ss(s); renderRec();
+}
+
+function saveRec(){
+  const name=document.getElementById('r-name').value.trim(); if(!name) return;
+  const freq=document.getElementById('r-freq').value;
+  const energy=document.getElementById('r-energy').value;
+  const s=getS();
+  s.recurring.push({id:'r'+Date.now(),name,freq,energy});
+  ss(s); closeM(null,'m-rec'); renderRec();
+  document.getElementById('r-name').value='';
+}
+
+// ════════════════════════════════════════════════════════
+// BACKLOG / MASTERLIJST
+// ════════════════════════════════════════════════════════
+function renderMaster(){
+  const s=getS(); const td=today();
+
+  // Planned = has date <= today, not done
+  const planned=s.backlog.filter(b=>b.date&&b.date<=td&&!b.done)
+    .sort((a,b)=>a.date.localeCompare(b.date));
+  // Backlog = no date or future date, not done
+  const backlog=s.backlog.filter(b=>(!b.date||b.date>td)&&!b.done)
+    .sort((a,b)=>(a.date||'9999').localeCompare(b.date||'9999'));
+  // Done
+  const doneItems=s.backlog.filter(b=>b.done);
+
+  renderBacklogSection('planned-list', planned, true);
+  renderBacklogSection('backlog-list',  backlog,  false);
+  renderBacklogSection('done-backlog-list', doneItems, false);
+
+  document.getElementById('planned-count').textContent=planned.length;
+  document.getElementById('backlog-count').textContent=backlog.length;
+}
+
+function renderBacklogSection(containerId, items, showDate){
+  const c=document.getElementById(containerId);
+  c.innerHTML='';
+  if(!items.length){ c.innerHTML='<div class="empty">Leeg ✦</div>'; return; }
+  items.forEach(b=>{
+    const div=document.createElement('div');
+    div.className='bitem'+(b.done?' done':'');
+    div.onclick=()=>toggleBack(b.id);
+
+    let dateBadge='';
+    if(b.date){
+      const td2=today();
+      const cls=b.date<td2?'overdue':b.date===td2?'today-date':'';
+      const label=b.date===td2?'Vandaag':b.date<td2?'Te laat':formatDate(b.date);
+      dateBadge=`<span class="bdate ${cls}">${label}</span>`;
+    }
+
+    div.innerHTML=`
+      <div class="tchk"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+      <span class="tname">${b.name}</span>
+      ${dateBadge}
+      <div class="epip ${b.energy}"></div>
+      <button class="delbtn" onclick="event.stopPropagation();deleteBack('${b.id}')">×</button>`;
+    c.appendChild(div);
+  });
+}
+
+function formatDate(d){
+  const dt=new Date(d+'T12:00:00');
+  const days=['zo','ma','di','wo','do','vr','za'];
+  const months=['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+  return `${days[dt.getDay()]} ${dt.getDate()} ${months[dt.getMonth()]}`;
+}
+
+function toggleBack(id){
+  const s=getS();
+  const b=s.backlog.find(x=>x.id===id);
+  if(b) b.done=!b.done;
+  ss(s); renderMaster(); renderTasks();
+}
+
+function deleteBack(id){
+  const s=getS(); s.backlog=s.backlog.filter(b=>b.id!==id); ss(s); renderMaster(); renderTasks();
+}
+
+function clearDoneBacklog(){
+  const s=getS(); s.backlog=s.backlog.filter(b=>!b.done); ss(s); renderMaster();
+}
+
+function saveBack(){
+  const name=document.getElementById('b-name').value.trim(); if(!name) return;
+  const date=document.getElementById('b-date').value||'';
+  const energy=document.getElementById('b-energy').value;
+  const s=getS();
+  s.backlog.push({id:'b'+Date.now(),name,date,energy,done:false});
+  ss(s); closeM(null,'m-back');
+  document.getElementById('b-name').value='';
+  document.getElementById('b-date').value='';
+  renderMaster(); renderTasks();
+}
+
+// ════════════════════════════════════════════════════════
+// MODALS
+// ════════════════════════════════════════════════════════
+function openM(id){ document.getElementById(id).classList.add('open'); }
+function closeM(e,id){ if(!e||e.target.id===id) document.getElementById(id).classList.remove('open'); }
+
+// ════════════════════════════════════════════════════════
+// SETTINGS
+// ════════════════════════════════════════════════════════
+function resetToday(){
+  if(!confirm('Dag resetten? Afvinkjes van vandaag worden gewist.')) return;
+  const s=getS(); const td=today();
+  s.doneTasks[td]=[]; s.doneRec[td]=[]; s.energy[td]=null;
+  curE=null; ss(s);
+  document.querySelectorAll('.ebtn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('ehint').className='ehint';
+  renderTasks(); renderRec();
+}
+
+function clearAll(){
+  if(!confirm('Alles wissen? Dit kan niet ongedaan worden gemaakt.')) return;
+  localStorage.removeItem('mijndag_v3'); location.reload();
+}
+
+function exportData(){
+  const data = localStorage.getItem('mijndag_v3') || '{}';
+  const date = new Date().toISOString().slice(0,10);
+  const blob = new Blob([data], {type:'application/json'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `dashboard-backup-${date}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importData(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const status = document.getElementById('import-status');
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try {
+      const parsed = JSON.parse(e.target.result);
+      const knownKeys = ['tasks','recurring','energy','doneTasks','doneRec','backlog'];
+      const hasKey = knownKeys.some(k => k in parsed);
+      if(!hasKey){ status.textContent = '\u26a0 Dit lijkt geen geldige backup te zijn.'; return; }
+      if(!confirm('Huidige data overschrijven met deze backup?')) return;
+      localStorage.setItem('mijndag_v3', JSON.stringify(parsed));
+      status.textContent = '\u2713 Backup hersteld!';
+      setTimeout(() => location.reload(), 800);
+    } catch(err){
+      status.textContent = '\u26a0 Kon het bestand niet lezen. Geldig JSON?';
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// ════════════════════════════════════════════════════════
+// RITUAL PAGE TABS
+// ════════════════════════════════════════════════════════
+function switchRitTab(el, tab) {
+  el.closest('.header').querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.rit-pane').forEach(p => p.style.display = 'none');
+  if (tab === 'seizoen')  { document.getElementById('ritueel-scroll').style.display = 'block'; }
+  if (tab === 'reading')  { document.getElementById('reading-scroll').style.display = 'block'; renderReadingForm(); }
+  if (tab === 'archief')  { document.getElementById('archief-scroll').style.display = 'block'; renderArchief(); }
+}
+
+// ════════════════════════════════════════════════════════
+// TAROT SPREADS PER SEASON
+// ════════════════════════════════════════════════════════
+const SPREADS = {
+  'Begin van de lente':     { thema: 'Ontwaken', vragen: ['Wat wil er in mij ontwaken dit seizoen?', 'Wat helpt me om te beginnen?', 'Wat mag ik loslaten om ruimte te maken?'] },
+  'Midden van de lente':    { thema: 'Groeien', vragen: ['Waar groei ik op dit moment?', 'Wat vraagt mijn volle aandacht?', 'Wat geeft mij energie en leven?'] },
+  'Einde van de lente':     { thema: 'Verandering', vragen: ['Wat is klaar om te veranderen?', 'Wat heb ik geleerd dit seizoen?', 'Wat neem ik mee naar de zomer?'] },
+  'Begin van de zomer':     { thema: 'Kansen', vragen: ['Welke kans vraagt om mijn ja?', 'Wat geeft mij kracht en moed?', 'Waar mag ik meer vertrouwen?'] },
+  'Midden van de zomer':    { thema: 'Overvloed', vragen: ['Wat is er al aanwezig in mijn leven?', 'Hoe ontvang ik wat er is?', 'Waar ben ik dankbaar voor?'] },
+  'Einde van de zomer':     { thema: 'Terugkeren', vragen: ['Waar ben ik van mezelf afgedwaald?', 'Wat wil ik meenemen naar de herfst?', 'Hoe keer ik terug naar mezelf?'] },
+  'Begin van de herfst':    { thema: 'Oogsten', vragen: ['Wat heb ik dit jaar gecreëerd of geleerd?', 'Waar ben ik trots op, al is het klein?', 'Wat verdient erkend te worden?'] },
+  'Midden van de herfst':   { thema: 'Transformatie', vragen: ['Wat wil er in mij transformeren?', 'Wat ben ik bereid los te laten?', 'Wie word ik aan de andere kant?'] },
+  'Einde van de herfst':    { thema: 'Naar binnen', vragen: ['Wat vraagt om stille aandacht?', 'Wat heb ik nodig om te rusten?', 'Wat wil ik beschermen deze winter?'] },
+  'Begin van de winter':    { thema: 'Licht zoeken', vragen: ['Waar vind ik innerlijk licht?', 'Wat houdt mij warm van binnen?', 'Hoe zorg ik voor mezelf in de donkere tijd?'] },
+  'Midden van de winter':   { thema: 'Dromen', vragen: ['Wat droomt er in mij?', 'Welk zaad wil ik planten voor het nieuwe jaar?', 'Wat wil ik verbeelden zonder oordeel?'] },
+  'Einde van de winter':    { thema: 'Afsluiten', vragen: ['Wat wil ik afsluiten voor het nieuwe jaar begint?', 'Wat neem ik mee uit deze cyclus?', 'Wat laat ik achter?'] },
+};
+
+function getSpread() {
+  const micro = getCurrentMicroSeason();
+  return SPREADS[micro.name] || SPREADS['Midden van de lente'];
+}
+
+// ════════════════════════════════════════════════════════
+// READING FORM
+// ════════════════════════════════════════════════════════
+function renderReadingForm() {
+  const micro = getCurrentMicroSeason();
+  const spread = getSpread();
+
+  const tarotSlots = spread.vragen.map((v, i) => `
+    <div class="reading-card-slot">
+      <div class="slot-header">
+        <div class="slot-number">${i+1}</div>
+        <div class="slot-question">${v}</div>
+        <span class="slot-deck">Tarot</span>
+      </div>
+      <input class="card-name-input" id="tarot-name-${i}" placeholder="Naam van de kaart…">
+      <textarea class="card-notes-input" id="tarot-notes-${i}" placeholder="Tekst uit de gids, eigen inzichten…" rows="3"></textarea>
+    </div>`).join('');
+
+  document.getElementById('reading-scroll').innerHTML = `
+    <div class="card" style="margin-top:14px">
+      <div class="card-head">
+        <span class="card-title">✦ ${micro.icon} ${micro.name}</span>
+        <span style="font-size:11px;color:var(--muted);font-style:italic">${spread.thema}</span>
+      </div>
+
+      <div style="padding:10px 18px 0;font-size:12px;color:var(--muted);font-style:italic;line-height:1.5">
+        Trek je kaarten en noteer wat je trekt. Er is geen goede of foute interpretatie.
+      </div>
+
+      <div style="padding:12px 18px 4px">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--ember);font-weight:600;margin-bottom:10px">🃏 Tarot — Oriens Animal</div>
+      </div>
+      ${tarotSlots}
+
+      <div style="padding:12px 18px 4px;border-top:1px solid var(--border)">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--dusk);font-weight:600;margin-bottom:10px">✦ Godinnenorakel</div>
+      </div>
+      <div class="reading-card-slot">
+        <div class="slot-header">
+          <div class="slot-number" style="background:rgba(139,94,139,0.15);border-color:rgba(139,94,139,0.3);color:var(--dusk)">G</div>
+          <div class="slot-question">Welke godin of energie ondersteunt jou in dit seizoen?</div>
+          <span class="slot-deck" style="">Godin</span>
+        </div>
+        <input class="card-name-input" id="godin-name" placeholder="Naam van de godin…" style="font-style:italic">
+        <textarea class="card-notes-input" id="godin-notes" placeholder="Haar energie, hoe ze je inspireert of ondersteunt…" rows="3"></textarea>
+      </div>
+
+      <div style="padding:12px 18px 4px;border-top:1px solid var(--border)">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--gold);font-weight:600;margin-bottom:4px">🌿 Voices of the Soul</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;font-style:italic">Trek één of meer kaarten — voeg toe wat je nodig hebt.</div>
+      </div>
+      <div id="soul-slots"></div>
+      <div style="padding:8px 18px;border-top:1px solid var(--border)">
+        <button class="card-action" onclick="addSoulSlot()">+ Nog een zielenboodschap</button>
+      </div>
+
+      <div class="reading-actions">
+        <button class="mbtn-c" onclick="clearReadingForm()">Wissen</button>
+        <button class="mbtn-p" onclick="saveReading()">Reading opslaan</button>
+      </div>
+    </div>`;
+
+  // Add first soul slot
+  addSoulSlot();
+}
+
+let soulSlotCount = 0;
+
+function addSoulSlot() {
+  soulSlotCount++;
+  const container = document.getElementById('soul-slots');
+  if (!container) return;
+  const div = document.createElement('div');
+  div.className = 'reading-card-slot';
+  div.id = `soul-slot-${soulSlotCount}`;
+  div.innerHTML = `
+    <div class="slot-header">
+      <div class="slot-number" style="background:rgba(232,170,80,0.15);border-color:rgba(232,170,80,0.3);color:var(--gold)">${soulSlotCount}</div>
+      <div class="slot-question">Boodschap voor je ziel in dit seizoen</div>
+      <span class="slot-deck" style="color:var(--gold);background:rgba(232,170,80,0.12);border-color:rgba(232,170,80,0.25)">Ziel</span>
+    </div>
+    <input class="card-name-input" id="soul-name-${soulSlotCount}" placeholder="Naam van de kaart…">
+    <textarea class="card-notes-input" id="soul-notes-${soulSlotCount}" placeholder="Boodschap, resonantie, eigen woorden…" rows="3"></textarea>`;
+  container.appendChild(div);
+}
+
+function clearReadingForm() {
+  soulSlotCount = 0;
+  renderReadingForm();
+}
+
+// ════════════════════════════════════════════════════════
+// SAVE & ARCHIVE
+// ════════════════════════════════════════════════════════
+function saveReading() {
+  const micro = getCurrentMicroSeason();
+  const spread = getSpread();
+
+  const tarot = spread.vragen.map((v, i) => ({
+    vraag: v,
+    kaart: document.getElementById(`tarot-name-${i}`)?.value?.trim() || '',
+    notities: document.getElementById(`tarot-notes-${i}`)?.value?.trim() || '',
+    deck: 'Tarot'
+  }));
+
+  const godin = {
+    vraag: 'Welke godin of energie ondersteunt jou in dit seizoen?',
+    kaart: document.getElementById('godin-name')?.value?.trim() || '',
+    notities: document.getElementById('godin-notes')?.value?.trim() || '',
+    deck: 'Godinnenorakel'
+  };
+
+  const soul = [];
+  for (let i = 1; i <= soulSlotCount; i++) {
+    const k = document.getElementById(`soul-name-${i}`)?.value?.trim() || '';
+    const n = document.getElementById(`soul-notes-${i}`)?.value?.trim() || '';
+    if (k || n) soul.push({ vraag: 'Boodschap voor je ziel', kaart: k, notities: n, deck: 'Voices of the Soul' });
+  }
+
+  // Check at least one card filled in
+  const hasContent = tarot.some(t => t.kaart) || godin.kaart || soul.length > 0;
+  if (!hasContent) { alert('Vul minimaal één kaartnaam in.'); return; }
+
+  const reading = {
+    id: 'rd' + Date.now(),
+    datum: today(),
+    seizoen: micro.name,
+    seizoenIcon: micro.icon,
+    thema: micro.theme || '',
+    kaarten: [...tarot, godin, ...soul].filter(k => k.kaart || k.notities)
+  };
+
+  const s = getS();
+  if (!s.readings) s.readings = [];
+  s.readings.unshift(reading);
+  ss(s);
+
+  // Switch to archief
+  const tabs = document.querySelectorAll('#page-ritueel .tab');
+  tabs.forEach(t => t.classList.remove('active'));
+  tabs[2].classList.add('active');
+  document.querySelectorAll('.rit-pane').forEach(p => p.style.display = 'none');
+  document.getElementById('archief-scroll').style.display = 'block';
+  renderArchief();
+
+  soulSlotCount = 0;
+}
+
+// ════════════════════════════════════════════════════════
+// ARCHIEF
+// ════════════════════════════════════════════════════════
+function renderArchief() {
+  const s = getS();
+  const readings = s.readings || [];
+  const list = document.getElementById('archief-list');
+  const count = document.getElementById('archief-count');
+  count.textContent = readings.length;
+
+  if (!readings.length) {
+    list.innerHTML = '<div class="empty">Nog geen readings opgeslagen</div>';
+    return;
+  }
+
+  list.innerHTML = '';
+  readings.forEach(r => {
+    const div = document.createElement('div');
+    div.className = 'archive-item';
+    div.onclick = () => openReadingDetail(r.id);
+
+    const dateStr = formatDate(r.datum);
+    const chips = r.kaarten.slice(0, 4).map(k =>
+      `<span class="archive-chip">${k.kaart || '—'}</span>`
+    ).join('');
+
+    div.innerHTML = `
+      <div class="archive-date">${dateStr}</div>
+      <div class="archive-season">${r.seizoenIcon} ${r.seizoen}</div>
+      <div class="archive-cards">${chips}${r.kaarten.length > 4 ? `<span class="archive-chip">+${r.kaarten.length-4}</span>` : ''}</div>`;
+    list.appendChild(div);
+  });
+}
+
+let currentReadingId = null;
+
+function openReadingDetail(id) {
+  const s = getS();
+  const r = (s.readings || []).find(x => x.id === id);
+  if (!r) return;
+  currentReadingId = id;
+
+  const slots = r.kaarten.map(k => `
+    <div class="detail-slot">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+        <span class="slot-deck">${k.deck}</span>
+      </div>
+      <div class="detail-question">${k.vraag}</div>
+      <div class="detail-card-name">${k.kaart || '—'}</div>
+      ${k.notities ? `<div class="detail-notes">${k.notities}</div>` : ''}
+    </div>`).join('');
+
+  document.getElementById('reading-detail-content').innerHTML = `
+    <div style="padding:0 0 14px">
+      <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">${formatDate(r.datum)}</div>
+      <div style="font-family:'Libre Baskerville',serif;font-size:18px;font-style:italic;color:var(--ink)">${r.seizoenIcon} ${r.seizoen}</div>
+    </div>
+    <div class="reading-detail">${slots}</div>`;
+
+  openM('m-reading-detail');
+}
+
+function deleteReading() {
+  if (!currentReadingId) return;
+  if (!confirm('Deze reading verwijderen?')) return;
+  const s = getS();
+  s.readings = (s.readings || []).filter(r => r.id !== currentReadingId);
+  ss(s);
+  closeM(null, 'm-reading-detail');
+  renderArchief();
+}
+
+
+// ════════════════════════════════════════════════════════
+// TAKEN — NIEUW / TOGGLE / EDIT / DEADLINE
+// ════════════════════════════════════════════════════════
+function openNewTaskModal(){
+  const inp=document.getElementById('new-task');
+  const prefill=inp?inp.value.trim():'';
+  document.getElementById('nt-name').value=prefill;
+  document.getElementById('nt-energy').value=document.getElementById('new-task-e')?.value||'geel';
+  document.getElementById('nt-duur').value='';
+  document.getElementById('nt-deadline').value='';
+  if(inp) inp.value='';
+  openM('m-new-task');
+  setTimeout(()=>document.getElementById('nt-name').focus(),120);
+}
+
+function saveNewTask(){
+  const name=document.getElementById('nt-name').value.trim();
+  if(!name) return;
+  const energy=document.getElementById('nt-energy').value;
+  const duur=parseInt(document.getElementById('nt-duur').value)||null;
+  const deadline=document.getElementById('nt-deadline').value||null;
+  const s=getS();
+  const t={id:'t'+Date.now(),name,energy};
+  if(duur) t.duur=duur;
+  if(deadline) t.deadline=deadline;
+  s.tasks.push(t);
+  ss(s); closeM(null,'m-new-task'); renderTasks();
+}
+
+function openEditRec(id){
+  const s=getS();
+  const r=s.recurring.find(r=>r.id===id);
+  if(!r) return;
+  document.getElementById('edit-rec-id').value=id;
+  document.getElementById('edit-rec-name').value=r.name;
+  document.getElementById('edit-rec-energy').value=r.energy;
+  document.getElementById('edit-rec-freq').value=r.freq;
+  openM('m-edit-rec');
+}
+
+function saveEditRec(){
+  const id=document.getElementById('edit-rec-id').value;
+  const name=document.getElementById('edit-rec-name').value.trim();
+  if(!name) return;
+  const energy=document.getElementById('edit-rec-energy').value;
+  const freq=document.getElementById('edit-rec-freq').value;
+  const s=getS();
+  const r=s.recurring.find(r=>r.id===id);
+  if(!r) return;
+  r.name=name; r.energy=energy; r.freq=freq;
+  ss(s); closeM(null,'m-edit-rec'); renderRec();
+}
+
+
+let showDone = true;
+
+function toggleDoneVisible(){
+  showDone = !showDone;
+  const btn = document.getElementById('done-toggle-btn');
+  if(btn) btn.textContent = showDone ? 'Verberg ✓' : 'Toon ✓';
+  ['task-list','tp-dag','tp-week','tp-maand'].forEach(id=>{
+    document.getElementById(id)?.classList.toggle('hide-done', !showDone);
+  });
+}
+
+function openEditTask(id){
+  const s=getS();
+  const t=s.tasks.find(t=>t.id===id);
+  if(!t) return;
+  document.getElementById('edit-task-id').value=id;
+  document.getElementById('edit-name').value=t.name;
+  document.getElementById('edit-energy').value=t.energy;
+  document.getElementById('edit-duur').value=t.duur||'';
+  document.getElementById('edit-deadline').value=t.deadline||'';
+  openM('m-edit');
+}
+
+function saveEditTask(){
+  const id=document.getElementById('edit-task-id').value;
+  const name=document.getElementById('edit-name').value.trim();
+  if(!name) return;
+  const energy=document.getElementById('edit-energy').value;
+  const duur=parseInt(document.getElementById('edit-duur').value)||null;
+  const deadline=document.getElementById('edit-deadline').value||null;
+  const s=getS();
+  const t=s.tasks.find(t=>t.id===id);
+  if(!t) return;
+  t.name=name; t.energy=energy;
+  if(duur) t.duur=duur; else delete t.duur;
+  if(deadline) t.deadline=deadline; else delete t.deadline;
+  ss(s); closeM(null,'m-edit'); renderTasks();
+}
+
+// ════════════════════════════════════════════════════════
+// GOOGLE DRIVE SYNC
+// ════════════════════════════════════════════════════════
+let _driveToken = null;
+let _driveFileId = localStorage.getItem('mijndag_drive_id') || null;
+let _syncTimer = null;
+
+function getDriveCID(){ return localStorage.getItem('mijndag_drive_client_id')||''; }
+
+function loadGIS(cb){
+  if(window.google?.accounts?.oauth2){ cb(); return; }
+  const s=document.createElement('script');
+  s.src='https://accounts.google.com/gsi/client';
+  s.onload=cb;
+  document.head.appendChild(s);
+}
+
+function initDrive(){
+  const cid=getDriveCID();
+  if(!cid) return;
+  loadGIS(()=>{
+    const client=google.accounts.oauth2.initTokenClient({
+      client_id:cid,
+      scope:'https://www.googleapis.com/auth/drive.appdata',
+      callback:(resp)=>{
+        if(resp.access_token){ _driveToken=resp.access_token; updateDriveUI(); syncFromDrive(); }
+      }
+    });
+    client.requestAccessToken({prompt:''});
+  });
+}
+
+function connectDrive(){
+  const inp=document.getElementById('drive-client-id-input');
+  const cid=inp?inp.value.trim():getDriveCID();
+  if(!cid){ alert('Voer eerst een Client ID in.'); return; }
+  localStorage.setItem('mijndag_drive_client_id',cid);
+  loadGIS(()=>{
+    const client=google.accounts.oauth2.initTokenClient({
+      client_id:cid,
+      scope:'https://www.googleapis.com/auth/drive.appdata',
+      callback:async(resp)=>{
+        if(resp.error){ setDriveStatus('Fout: '+resp.error); return; }
+        _driveToken=resp.access_token;
+        updateDriveUI();
+        await syncFromDrive();
+      }
+    });
+    client.requestAccessToken();
+  });
+}
+
+function disconnectDrive(){
+  if(_driveToken) google.accounts.oauth2.revoke(_driveToken,()=>{});
+  _driveToken=null;
+  updateDriveUI();
+  setDriveStatus('Niet verbonden');
+}
+
+async function findDriveFile(){
+  if(_driveFileId) return _driveFileId;
+  const r=await fetch(
+    "https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name%3D'mijndag_v3.json'",
+    {headers:{Authorization:`Bearer ${_driveToken}`}}
+  );
+  const d=await r.json();
+  if(d.files?.length){
+    _driveFileId=d.files[0].id;
+    localStorage.setItem('mijndag_drive_id',_driveFileId);
+    return _driveFileId;
+  }
+  return null;
+}
+
+async function syncFromDrive(){
+  if(!_driveToken) return;
+  setDriveStatus('Ophalen…');
+  try{
+    const fid=await findDriveFile();
+    if(!fid){ await pushToDrive(); return; }
+    const r=await fetch(
+      `https://www.googleapis.com/drive/v3/files/${fid}?alt=media`,
+      {headers:{Authorization:`Bearer ${_driveToken}`}}
+    );
+    if(!r.ok){ setDriveStatus('Fout bij ophalen ('+r.status+')'); return; }
+    const remote=await r.json();
+    const remoteTs=remote._ts||0;
+    const localTs=parseInt(localStorage.getItem('mijndag_ts')||'0');
+    if(remoteTs>localTs){
+      const {_ts,...clean}=remote;
+      localStorage.setItem('mijndag_v3',JSON.stringify(clean));
+      localStorage.setItem('mijndag_ts',remoteTs);
+      setDriveStatus('Bijgewerkt vanuit Drive ✓');
+      setTimeout(()=>location.reload(),600);
+    } else {
+      await pushToDrive();
+    }
+  } catch(e){
+    setDriveStatus('Fout: '+e.message);
+    console.error(e);
+  }
+}
+
+async function pushToDrive(){
+  if(!_driveToken) return;
+  setDriveStatus('Opslaan…');
+  try{
+    const s=getS();
+    const payload=JSON.stringify({...s,_ts:parseInt(localStorage.getItem('mijndag_ts')||Date.now())});
+    let fid=await findDriveFile();
+    let r;
+    if(fid){
+      r=await fetch(
+        `https://www.googleapis.com/upload/drive/v3/files/${fid}?uploadType=media`,
+        {method:'PATCH',headers:{Authorization:`Bearer ${_driveToken}`,'Content-Type':'application/json'},body:payload}
+      );
+    } else {
+      const meta=JSON.stringify({name:'mijndag_v3.json',parents:['appDataFolder']});
+      const form=new FormData();
+      form.append('metadata',new Blob([meta],{type:'application/json'}));
+      form.append('media',new Blob([payload],{type:'application/json'}));
+      r=await fetch(
+        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
+        {method:'POST',headers:{Authorization:`Bearer ${_driveToken}`},body:form}
+      );
+      const created=await r.json();
+      _driveFileId=created.id;
+      localStorage.setItem('mijndag_drive_id',_driveFileId);
+    }
+    setDriveStatus(r.ok?'Gesynchroniseerd ✓':'Fout bij opslaan ('+r.status+')');
+  } catch(e){
+    setDriveStatus('Fout: '+e.message);
+    console.error(e);
+  }
+}
+
+function setDriveStatus(msg){
+  const el=document.getElementById('drive-status');
+  if(el) el.textContent=msg;
+}
+
+function updateDriveUI(){
+  const conn=!!_driveToken;
+  const connBtn=document.getElementById('drive-connect-btn');
+  const discBtn=document.getElementById('drive-disconnect-btn');
+  const syncBtn=document.getElementById('drive-sync-btn');
+  if(connBtn) connBtn.style.display=conn?'none':'';
+  if(discBtn) discBtn.style.display=conn?'':'none';
+  if(syncBtn) syncBtn.style.display=conn?'':'none';
+  if(conn) setDriveStatus('Verbonden');
+}
+
+// ════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════
+function init(){
+  initHeader();
+  const s=getS(); const td=today();
+  const savedE=s.energy[td];
+  if(savedE){
+    curE=savedE;
+    document.querySelector(`.ebtn[data-e="${savedE}"]`).classList.add('active');
+    const h=document.getElementById('ehint');
+    h.textContent=EHINTS[savedE]; h.className=`ehint visible ${savedE}`;
+  }
+  renderRitualMini();
+  renderTasks();
+  renderRec();
+  if(s.calApiKey&&s.calId){
+    if(s.calCache&&s.calCache.date===td) renderCalEvents(s.calCache.events);
+    else refreshCal();
+  } else {
+    renderCalSetup();
+  }
+  initDrive();
+}
+
+init();
+</script>
+</body>
+</html>

@@ -377,6 +377,27 @@ body::before {
 }
 .per-check:active { background: var(--ember); border-color: var(--ember); color: white; }
 
+/* ══════════════════════════════════════
+   TIJDSFILTER
+══════════════════════════════════════ */
+.time-chips { display: flex; gap: 8px; flex-wrap: wrap; padding: 10px 18px 14px; }
+.time-chip {
+  font-size: 12px; font-weight: 600;
+  padding: 6px 14px; border-radius: 20px;
+  border: 1px solid var(--border2); background: transparent;
+  color: var(--muted); cursor: pointer;
+  font-family: 'Quicksand', sans-serif; transition: all 0.15s;
+}
+.time-chip.active { background: var(--ember); border-color: var(--ember); color: white; }
+.time-chip:active { opacity: 0.7; }
+.time-custom {
+  width: 72px; border: 1px solid var(--border2); border-radius: 20px;
+  background: transparent; color: var(--ink); text-align: center;
+  font-family: 'Quicksand', sans-serif; font-size: 12px; font-weight: 600;
+  padding: 6px 10px; outline: none;
+}
+.time-custom::placeholder { color: var(--faint); }
+
 .add-row {
   display: flex; gap: 8px; align-items: center;
   padding: 10px 14px; border-top: 1px solid var(--border);
@@ -830,6 +851,23 @@ body::before {
       <div id="cal-area"></div>
     </div>
 
+    <!-- Tijdsfilter -->
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">Beschikbare tijd</span>
+        <button class="card-btn" id="time-clear-btn" onclick="setTimeBudget(null)" style="display:none">× Wis</button>
+      </div>
+      <div class="time-chips">
+        <button class="time-chip" data-min="15" onclick="setTimeBudget(15)">15 min</button>
+        <button class="time-chip" data-min="30" onclick="setTimeBudget(30)">30 min</button>
+        <button class="time-chip" data-min="60" onclick="setTimeBudget(60)">60 min</button>
+        <button class="time-chip" data-min="90" onclick="setTimeBudget(90)">90 min</button>
+        <input class="time-custom" id="time-custom-inp" type="number" min="1" max="480" placeholder="eigen min"
+          onchange="setTimeBudget(parseInt(this.value)||null)"
+          onkeydown="if(event.key==='Enter')setTimeBudget(parseInt(this.value)||null)">
+      </div>
+    </div>
+
     <!-- Taken vandaag -->
     <div class="card">
       <div class="card-head">
@@ -1127,6 +1165,7 @@ body::before {
         <option value="365">Jaarlijks</option>
       </select>
     </div>
+    <div class="mfield"><label>Duur (minuten, optioneel)</label><input id="ep-duur" type="number" min="1" placeholder="bijv. 20"></div>
     <div class="mactions">
       <button class="mbtn-c" onclick="closeM(null,'m-edit-periodic')">Annuleren</button>
       <button class="mbtn-p" onclick="saveEditPeriodic()">Opslaan</button>
@@ -1202,6 +1241,7 @@ body::before {
         <option value="maand">Maandelijks</option>
       </select>
     </div>
+    <div class="mfield"><label>Duur (minuten, optioneel)</label><input id="edit-rec-duur" type="number" min="1" placeholder="bijv. 15"></div>
     <div class="mactions">
       <button class="mbtn-c" onclick="closeM(null,'m-edit-rec')">Annuleren</button>
       <button class="mbtn-p" onclick="saveEditRec()">Opslaan</button>
@@ -1710,6 +1750,7 @@ function renderTasks(){
   });
 
   s.tasks.forEach((t,i)=>{
+    if(timeBudget && t.duur && t.duur > timeBudget) return;
     const isDone=done.includes(t.id);
     const f=fits(t.energy,curE);
     const div=document.createElement('div');
@@ -1781,9 +1822,12 @@ function renderRec(){
       const div=document.createElement('div');
       div.className='titem'+(isDone?' done':'')+((!f&&!isDone)?' dimmed':'');
       div.onclick=()=>toggleRec(r.id);
+      if(timeBudget && r.duur && r.duur > timeBudget) return;
+      const rDurBadge=r.duur?`<span class="dur-badge">${r.duur} min</span>`:'';
       div.innerHTML=`
         <div class="tchk"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg></div>
         <span class="tname">${r.name}</span>
+        ${rDurBadge}
         <div class="epip ${r.energy}"></div>
         <button class="editbtn" onclick="event.stopPropagation();openEditRec('${r.id}')">✎</button>
         <button class="delbtn" onclick="event.stopPropagation();deleteRec('${r.id}')">×</button>`;
@@ -2290,17 +2334,19 @@ function renderPeriodic(){
     list.innerHTML='<div class="empty">Alles bijgewerkt ✦</div>';
     return;
   }
-  visible.forEach(t=>{
+  const timeVisible = timeBudget ? visible.filter(t => !t.duur || t.duur <= timeBudget) : visible;
+  timeVisible.forEach(t=>{
     const overdue=periodicUrgency(t)>2;
     const div=document.createElement('div');
     div.className='per-item'+(overdue?' per-overdue':'');
     const days=t.lastDone?Math.floor((Date.now()-new Date(t.lastDone+'T12:00:00').getTime())/86400000):null;
     const lastText=!t.lastDone?'nog nooit':days===0?'vandaag':days===1?'gisteren':`${days} dagen geleden`;
     const freqLabel=FREQ_LABELS[t.freq]||`elke ${t.freq} dagen`;
+    const pDurBadge=t.duur?`<span class="dur-badge">${t.duur} min</span>`:'';
     div.innerHTML=`
       <div class="per-text">
         <span class="per-name">${t.name}</span>
-        <span class="per-meta">${freqLabel} · ${lastText}</span>
+        <span class="per-meta">${freqLabel} · ${lastText}${t.duur?' · '+t.duur+' min':''}</span>
       </div>
       <button class="skip-btn" onclick="skipPeriodic('${t.id}')">Later</button>
       <button class="editbtn" onclick="openEditPeriodic('${t.id}')" style="flex-shrink:0">✎</button>
@@ -2332,6 +2378,7 @@ function openEditPeriodic(id){
   document.getElementById('ep-id').value=id;
   document.getElementById('ep-name').value=t.name;
   document.getElementById('ep-freq').value=t.freq;
+  document.getElementById('ep-duur').value=t.duur||'';
   openM('m-edit-periodic');
 }
 
@@ -2348,8 +2395,10 @@ function saveEditPeriodic(){
   const id=document.getElementById('ep-id').value;
   const name=document.getElementById('ep-name').value.trim(); if(!name) return;
   const freq=parseInt(document.getElementById('ep-freq').value);
+  const duur=parseInt(document.getElementById('ep-duur').value)||null;
   const s=getS(); const t=s.periodicTasks.find(t=>t.id===id); if(!t) return;
   t.name=name; t.freq=freq;
+  if(duur) t.duur=duur; else delete t.duur;
   ss(s); closeM(null,'m-edit-periodic'); renderPeriodic();
 }
 
@@ -2373,6 +2422,27 @@ function saveEditBack(){
   const s=getS(); const b=s.backlog.find(b=>b.id===id); if(!b) return;
   b.name=name; b.date=date; b.energy=energy;
   ss(s); closeM(null,'m-edit-back'); renderMaster();
+}
+
+// ════════════════════════════════════════════════════════
+// TIJDSFILTER
+// ════════════════════════════════════════════════════════
+let timeBudget = null;
+
+function setTimeBudget(min){
+  timeBudget = min || null;
+  document.querySelectorAll('.time-chip').forEach(c=>{
+    c.classList.toggle('active', parseInt(c.dataset.min)===timeBudget);
+  });
+  const clearBtn = document.getElementById('time-clear-btn');
+  const customInp = document.getElementById('time-custom-inp');
+  if(clearBtn) clearBtn.style.display = timeBudget ? '' : 'none';
+  if(customInp && ![15,30,60,90].includes(timeBudget)){
+    customInp.value = timeBudget || '';
+  } else if(customInp) {
+    customInp.value = '';
+  }
+  renderTasks(); renderRec(); renderPeriodic();
 }
 
 // ════════════════════════════════════════════════════════
@@ -2412,6 +2482,7 @@ function openEditRec(id){
   document.getElementById('edit-rec-name').value=r.name;
   document.getElementById('edit-rec-energy').value=r.energy;
   document.getElementById('edit-rec-freq').value=r.freq;
+  document.getElementById('edit-rec-duur').value=r.duur||'';
   openM('m-edit-rec');
 }
 
@@ -2421,10 +2492,12 @@ function saveEditRec(){
   if(!name) return;
   const energy=document.getElementById('edit-rec-energy').value;
   const freq=document.getElementById('edit-rec-freq').value;
+  const duur=parseInt(document.getElementById('edit-rec-duur').value)||null;
   const s=getS();
   const r=s.recurring.find(r=>r.id===id);
   if(!r) return;
   r.name=name; r.energy=energy; r.freq=freq;
+  if(duur) r.duur=duur; else delete r.duur;
   ss(s); closeM(null,'m-edit-rec'); renderRec();
 }
 

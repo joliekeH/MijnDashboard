@@ -340,6 +340,43 @@ body::before {
   white-space: nowrap; flex-shrink: 0;
 }
 
+@keyframes shake {
+  0%,100% { transform: translateX(0); }
+  20%,60% { transform: translateX(-5px); }
+  40%,80% { transform: translateX(5px); }
+}
+.shake { animation: shake 0.3s ease; }
+
+/* ══════════════════════════════════════
+   PERIODIEKE TAKEN
+══════════════════════════════════════ */
+.per-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 18px; border-bottom: 1px solid var(--border);
+}
+.per-item:last-child { border-bottom: none; }
+.per-text { flex: 1; min-width: 0; }
+.per-name { display: block; font-size: 14px; color: var(--ink2); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.per-meta { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; }
+.per-item.per-overdue .per-name { color: var(--rose); }
+.per-item.per-overdue .per-meta { color: var(--rose-dim); }
+.skip-btn {
+  font-size: 11px; color: var(--muted); font-weight: 600;
+  background: none; border: 1px solid var(--border2); border-radius: 8px;
+  padding: 4px 9px; cursor: pointer; flex-shrink: 0;
+  font-family: 'Quicksand', sans-serif; transition: all 0.15s;
+  white-space: nowrap;
+}
+.skip-btn:active { border-color: var(--amber); color: var(--amber); }
+.per-check {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 1.5px solid var(--border2); background: transparent;
+  color: var(--muted); cursor: pointer; flex-shrink: 0;
+  font-size: 14px; display: flex; align-items: center; justify-content: center;
+  transition: all 0.18s;
+}
+.per-check:active { background: var(--ember); border-color: var(--ember); color: white; }
+
 .add-row {
   display: flex; gap: 8px; align-items: center;
   padding: 10px 14px; border-top: 1px solid var(--border);
@@ -831,6 +868,18 @@ body::before {
       <div class="tpane" id="tp-maand"></div>
     </div>
 
+    <!-- Periodiek -->
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">Periodiek</span>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="card-count" id="periodic-count">—</span>
+          <button class="card-btn" onclick="openM('m-new-periodic')">+ Toevoegen</button>
+        </div>
+      </div>
+      <div id="periodic-list"></div>
+    </div>
+
   </div>
 </div>
 
@@ -1036,6 +1085,78 @@ body::before {
 </div>
 
 
+<!-- Nieuwe periodieke taak -->
+<div class="moverlay" id="m-new-periodic" onclick="closeM(event,'m-new-periodic')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Periodieke taak</div>
+    <div class="mfield"><label>Naam</label><input id="np-name" placeholder="Bijv. Ramen lappen"></div>
+    <div class="mfield"><label>Hoe vaak</label>
+      <select id="np-freq">
+        <option value="7">Wekelijks</option>
+        <option value="14">Tweewekelijks</option>
+        <option value="30" selected>Maandelijks</option>
+        <option value="60">Tweemaandelijks</option>
+        <option value="90">Per kwartaal</option>
+        <option value="180">Halfjaarlijks</option>
+        <option value="365">Jaarlijks</option>
+      </select>
+    </div>
+    <div class="mactions">
+      <button class="mbtn-c" onclick="closeM(null,'m-new-periodic')">Annuleren</button>
+      <button class="mbtn-p" onclick="saveNewPeriodic()">Toevoegen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit periodieke taak -->
+<div class="moverlay" id="m-edit-periodic" onclick="closeM(event,'m-edit-periodic')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Taak bewerken</div>
+    <input type="hidden" id="ep-id">
+    <div class="mfield"><label>Naam</label><input id="ep-name"></div>
+    <div class="mfield"><label>Hoe vaak</label>
+      <select id="ep-freq">
+        <option value="7">Wekelijks</option>
+        <option value="14">Tweewekelijks</option>
+        <option value="30">Maandelijks</option>
+        <option value="60">Tweemaandelijks</option>
+        <option value="90">Per kwartaal</option>
+        <option value="180">Halfjaarlijks</option>
+        <option value="365">Jaarlijks</option>
+      </select>
+    </div>
+    <div class="mactions">
+      <button class="mbtn-c" onclick="closeM(null,'m-edit-periodic')">Annuleren</button>
+      <button class="mbtn-p" onclick="saveEditPeriodic()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit backlog item -->
+<div class="moverlay" id="m-edit-back" onclick="closeM(event,'m-edit-back')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Taak bewerken</div>
+    <input type="hidden" id="eb-id">
+    <div class="mfield"><label>Naam</label><input id="eb-name" placeholder="Taaknaam"></div>
+    <div class="mfield"><label>Datum (optioneel)</label><input id="eb-date" type="date"></div>
+    <div class="mfield"><label>Energie</label>
+      <select id="eb-energy">
+        <option value="rood">🔴 Laag</option>
+        <option value="oranje">🟠 Beetje</option>
+        <option value="geel" selected>🟡 Gemiddeld</option>
+        <option value="groen">🟢 Hoog</option>
+      </select>
+    </div>
+    <div class="mactions">
+      <button class="mbtn-c" onclick="closeM(null,'m-edit-back')">Annuleren</button>
+      <button class="mbtn-p" onclick="saveEditBack()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
 <!-- Nieuwe taak (volledig) -->
 <div class="moverlay" id="m-new-task" onclick="closeM(event,'m-new-task')">
   <div class="modal">
@@ -1147,7 +1268,8 @@ function getS(){
   if(!s.doneTasks) s.doneTasks={};
   if(!s.doneRec)   s.doneRec={};
   if(!s.backlog)   s.backlog=[];
-  if(!s.calUrl)    s.calUrl='';
+  if(!s.calUrl)       s.calUrl='';
+  if(!s.periodicTasks) s.periodicTasks=defaultPeriodicTasks();
   return s;
 }
 
@@ -1625,7 +1747,8 @@ function deleteTask(i){
 
 function addTask(){
   const inp=document.getElementById('new-task');
-  const name=inp.value.trim(); if(!name) return;
+  const name=inp.value.trim();
+  if(!name){ inp.classList.add('shake'); setTimeout(()=>inp.classList.remove('shake'),300); return; }
   const energy=document.getElementById('new-task-e').value;
   const s=getS();
   s.tasks.push({id:'t'+Date.now(),name,energy});
@@ -1736,6 +1859,7 @@ function renderBacklogSection(containerId, items, showDate){
       <span class="tname">${b.name}</span>
       ${dateBadge}
       <div class="epip ${b.energy}"></div>
+      <button class="editbtn" onclick="event.stopPropagation();openEditBack('${b.id}')">✎</button>
       <button class="delbtn" onclick="event.stopPropagation();deleteBack('${b.id}')">×</button>`;
     c.appendChild(div);
   });
@@ -2091,6 +2215,167 @@ function deleteReading() {
 
 
 // ════════════════════════════════════════════════════════
+// PERIODIEKE TAKEN (ROTATIESYSTEEM)
+// ════════════════════════════════════════════════════════
+const FREQ_LABELS={7:'wekelijks',14:'tweewekelijks',30:'maandelijks',60:'tweemaandelijks',90:'per kwartaal',180:'halfjaarlijks',365:'jaarlijks'};
+
+function defaultPeriodicTasks(){
+  return [
+    ['Prullenbak / containers checken',7],
+    ['Oud papier checken',7],
+    ['Was doen',7],
+    ['Garderobe uitzoeken — één plank/sectie',14],
+    ['Statiegeld wegbrengen',30],
+    ['Glas wegbrengen',30],
+    ['Kaptafel opruimen',30],
+    ['Afwasmachine zout en glansmiddel bijvullen',30],
+    ['Cosmetica langslopen',30],
+    ['Tandenborstelkoppen vervangen',30],
+    ['Wasmachinedeur rubber afvegen',30],
+    ['Afwasmachine filter reinigen',60],
+    ['Magnetron / combioven grondig schoonmaken',60],
+    ['Koffiemachine ontkalken',90],
+    ['Waterkoker ontkalken',90],
+    ['Make-up kwasten wassen',90],
+    ['Haarborstels schoonmaken',90],
+    ['Vlooien- en ontwormmiddel kat',90],
+    ['Budget doornemen',90],
+    ['Wasmachinefilter (pomp) reinigen',90],
+    ['Ventilatierooster stofzuigen',90],
+    ["Foto's backuppen",90],
+    ['Mappen / downloads opschonen',90],
+    ['Wachtwoorden checken',90],
+    ['Ramen lappen',180],
+    ['Winter-/zomerkleding omruilen',180],
+    ['Douchekop ontkalken',180],
+    ['Afzuigkap filters vervangen',180],
+    ['Medicijndoos op datum checken',180],
+    ['Rookmelder testen',180],
+    ['Koelkast afdichtingsrubber afvegen',180],
+    ['Kamerplanten verpotten',365],
+    ['Gordijnen wassen',365],
+    ['Tuintegels schoonmaken',365],
+    ['Koelkast / vriezer ontdooien en schoonmaken',365],
+    ['Dierenarts + vaccinaties kat',365],
+    ['Belastingaangifte indienen',365],
+    ['Zorgverzekering vergelijken',365],
+    ['Overige verzekeringen vergelijken',365],
+    ['Contacten opschonen telefoon',365],
+    ['Apps en abonnementen doornemen',365],
+  ].map(([name,freq],i)=>({id:'pt'+(i+1),name,freq,lastDone:null,skippedUntil:null}));
+}
+
+function periodicUrgency(t){
+  if(!t.lastDone) return 99999;
+  return (Date.now()-new Date(t.lastDone+'T12:00:00').getTime())/86400000/t.freq;
+}
+
+function isDue(t){
+  const now=Date.now();
+  if(t.skippedUntil&&new Date(t.skippedUntil).getTime()>now) return false;
+  if(!t.lastDone) return true;
+  return (now-new Date(t.lastDone+'T12:00:00').getTime())/86400000>=t.freq;
+}
+
+function renderPeriodic(){
+  const s=getS(); const tasks=s.periodicTasks||[];
+  const due=tasks.filter(isDue);
+  const visible=[...due].sort((a,b)=>periodicUrgency(b)-periodicUrgency(a)).slice(0,5);
+  const countEl=document.getElementById('periodic-count');
+  if(countEl) countEl.textContent=due.length>5?`${due.length} klaar`:due.length||'✓';
+  const list=document.getElementById('periodic-list');
+  if(!list) return;
+  list.innerHTML='';
+  if(!visible.length){
+    list.innerHTML='<div class="empty">Alles bijgewerkt ✦</div>';
+    return;
+  }
+  visible.forEach(t=>{
+    const overdue=periodicUrgency(t)>2;
+    const div=document.createElement('div');
+    div.className='per-item'+(overdue?' per-overdue':'');
+    const days=t.lastDone?Math.floor((Date.now()-new Date(t.lastDone+'T12:00:00').getTime())/86400000):null;
+    const lastText=!t.lastDone?'nog nooit':days===0?'vandaag':days===1?'gisteren':`${days} dagen geleden`;
+    const freqLabel=FREQ_LABELS[t.freq]||`elke ${t.freq} dagen`;
+    div.innerHTML=`
+      <div class="per-text">
+        <span class="per-name">${t.name}</span>
+        <span class="per-meta">${freqLabel} · ${lastText}</span>
+      </div>
+      <button class="skip-btn" onclick="skipPeriodic('${t.id}')">Later</button>
+      <button class="editbtn" onclick="openEditPeriodic('${t.id}')" style="flex-shrink:0">✎</button>
+      <button class="per-check" onclick="donePeriodic('${t.id}')">✓</button>`;
+    list.appendChild(div);
+  });
+  if(due.length>5){
+    const f=document.createElement('div');
+    f.style.cssText='padding:8px 18px 10px;font-size:11px;color:var(--muted);text-align:center';
+    f.textContent=`+ ${due.length-5} meer staan klaar`;
+    list.appendChild(f);
+  }
+}
+
+function donePeriodic(id){
+  const s=getS(); const t=s.periodicTasks.find(t=>t.id===id); if(!t) return;
+  t.lastDone=today(); t.skippedUntil=null;
+  ss(s); renderPeriodic();
+}
+
+function skipPeriodic(id){
+  const s=getS(); const t=s.periodicTasks.find(t=>t.id===id); if(!t) return;
+  t.skippedUntil=new Date(Date.now()+24*60*60*1000).toISOString();
+  ss(s); renderPeriodic();
+}
+
+function openEditPeriodic(id){
+  const s=getS(); const t=s.periodicTasks.find(t=>t.id===id); if(!t) return;
+  document.getElementById('ep-id').value=id;
+  document.getElementById('ep-name').value=t.name;
+  document.getElementById('ep-freq').value=t.freq;
+  openM('m-edit-periodic');
+}
+
+function saveNewPeriodic(){
+  const name=document.getElementById('np-name').value.trim(); if(!name) return;
+  const freq=parseInt(document.getElementById('np-freq').value);
+  const s=getS();
+  s.periodicTasks.push({id:'pt'+Date.now(),name,freq,lastDone:null,skippedUntil:null});
+  ss(s); closeM(null,'m-new-periodic'); renderPeriodic();
+  document.getElementById('np-name').value='';
+}
+
+function saveEditPeriodic(){
+  const id=document.getElementById('ep-id').value;
+  const name=document.getElementById('ep-name').value.trim(); if(!name) return;
+  const freq=parseInt(document.getElementById('ep-freq').value);
+  const s=getS(); const t=s.periodicTasks.find(t=>t.id===id); if(!t) return;
+  t.name=name; t.freq=freq;
+  ss(s); closeM(null,'m-edit-periodic'); renderPeriodic();
+}
+
+// ════════════════════════════════════════════════════════
+// MASTERLIJST — EDIT
+// ════════════════════════════════════════════════════════
+function openEditBack(id){
+  const s=getS(); const b=s.backlog.find(b=>b.id===id); if(!b) return;
+  document.getElementById('eb-id').value=id;
+  document.getElementById('eb-name').value=b.name;
+  document.getElementById('eb-date').value=b.date||'';
+  document.getElementById('eb-energy').value=b.energy;
+  openM('m-edit-back');
+}
+
+function saveEditBack(){
+  const id=document.getElementById('eb-id').value;
+  const name=document.getElementById('eb-name').value.trim(); if(!name) return;
+  const date=document.getElementById('eb-date').value||null;
+  const energy=document.getElementById('eb-energy').value;
+  const s=getS(); const b=s.backlog.find(b=>b.id===id); if(!b) return;
+  b.name=name; b.date=date; b.energy=energy;
+  ss(s); closeM(null,'m-edit-back'); renderMaster();
+}
+
+// ════════════════════════════════════════════════════════
 // TAKEN — NIEUW / TOGGLE / EDIT / DEADLINE
 // ════════════════════════════════════════════════════════
 function openNewTaskModal(){
@@ -2351,6 +2636,7 @@ function init(){
   renderRitualMini();
   renderTasks();
   renderRec();
+  renderPeriodic();
   if(s.calApiKey&&s.calId){
     if(s.calCache&&s.calCache.date===td) renderCalEvents(s.calCache.events);
     else refreshCal();

@@ -1065,6 +1065,10 @@ body::before {
         <button class="sbtn" style="margin-top:10px;display:none" id="drive-disconnect-btn" onclick="disconnectDrive()">Verbinding verbreken</button>
         <button class="sbtn" style="margin-top:8px;display:none" id="drive-sync-btn" onclick="syncFromDrive()">↻ Nu synchroniseren</button>
         <div id="drive-status" style="font-size:12px;color:var(--muted);margin-top:8px;"></div>
+        <div id="drive-startlink-row" style="display:none;margin-top:8px">
+          <button class="sbtn" onclick="copyStartLink()">🔗 Kopieer opstartlink</button>
+          <div style="font-size:11px;color:var(--faint);margin-top:4px">Sla deze link op als bladwijzer — opent het dashboard met je Client ID al ingevuld.</div>
+        </div>
         <div style="font-size:11px;color:var(--faint);margin-top:6px;">Data wordt opgeslagen in de verborgen appmap van je Google Drive. Alleen dit dashboard heeft er toegang toe.</div>
       </div>
     </div>
@@ -3151,6 +3155,28 @@ function updateDriveUI(){
   if(discBtn) discBtn.style.display=conn?'':'none';
   if(syncBtn) syncBtn.style.display=conn?'':'none';
   if(conn) setDriveStatus('Verbonden');
+  // Toon opstartlink als Client ID aanwezig is
+  const cid=getDriveCID();
+  const linkRow=document.getElementById('drive-startlink-row');
+  if(linkRow) linkRow.style.display=cid?'':'none';
+}
+
+function copyStartLink(){
+  const cid=getDriveCID(); if(!cid) return;
+  const url=location.origin+location.pathname+'#cid='+encodeURIComponent(cid);
+  navigator.clipboard.writeText(url).then(()=>{
+    const btn=event.target;
+    btn.textContent='✓ Gekopieerd!';
+    setTimeout(()=>btn.textContent='🔗 Kopieer opstartlink',2000);
+  });
+}
+
+function readStartLinkCID(){
+  const hash=location.hash;
+  if(!hash.includes('cid=')) return;
+  const cid=decodeURIComponent(hash.split('cid=')[1]);
+  if(cid){ localStorage.setItem('mijndag_drive_client_id',cid); }
+  history.replaceState(null,'',location.pathname); // verwijder uit URL
 }
 
 // ════════════════════════════════════════════════════════
@@ -3183,6 +3209,7 @@ function init(){
   initDrive();
 }
 
+readStartLinkCID();
 init();
 </script>
 </body>

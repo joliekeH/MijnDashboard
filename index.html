@@ -398,6 +398,9 @@ body::before {
 }
 .time-custom::placeholder { color: var(--faint); }
 
+.vr-notdue { opacity: 0.38; }
+.vr-dep { background: rgba(232,170,80,0.06); }
+
 .add-row {
   display: flex; gap: 8px; align-items: center;
   padding: 10px 14px; border-top: 1px solid var(--border);
@@ -929,17 +932,24 @@ body::before {
   <div class="header z1">
     <div class="header-row">
       <div>
-        <div class="greeting" style="font-size:22px">Masterlijst</div>
-        <div class="date-str">Alles wat ooit moet</div>
+        <div class="greeting" style="font-size:22px">Taken</div>
+        <div class="date-str">Routines & planning</div>
       </div>
       <button class="card-btn" style="margin-top:4px" onclick="openM('m-back')">+ Toevoegen</button>
     </div>
   </div>
 
   <div class="scroll z1">
+
+    <!-- Vaste routines -->
+    <div class="card">
+      <div class="card-head"><span class="card-title">Vaste routines</span></div>
+      <div id="vr-list"></div>
+    </div>
+
     <div class="card">
       <div class="card-head">
-        <span class="card-title">Vandaag & gepland</span>
+        <span class="card-title">Eenmalige taken</span>
         <span class="card-count" id="planned-count">—</span>
       </div>
       <div id="planned-list"></div>
@@ -1056,7 +1066,7 @@ body::before {
     <div class="nicon">☀️</div><div class="nlabel">Dag</div>
   </button>
   <button class="nbtn" onclick="navTo('master',this)">
-    <div class="nicon">📋</div><div class="nlabel">Lijst</div>
+    <div class="nicon">📋</div><div class="nlabel">Taken</div>
   </button>
   <button class="nbtn" onclick="navTo('ritueel',this)">
     <div class="nicon">✦</div><div class="nlabel">Ritueel</div>
@@ -1131,6 +1141,7 @@ body::before {
     <div class="mfield"><label>Naam</label><input id="np-name" placeholder="Bijv. Ramen lappen"></div>
     <div class="mfield"><label>Hoe vaak</label>
       <select id="np-freq">
+        <option value="4">2x per week</option>
         <option value="7">Wekelijks</option>
         <option value="14">Tweewekelijks</option>
         <option value="30" selected>Maandelijks</option>
@@ -1156,6 +1167,7 @@ body::before {
     <div class="mfield"><label>Naam</label><input id="ep-name"></div>
     <div class="mfield"><label>Hoe vaak</label>
       <select id="ep-freq">
+        <option value="4">2x per week</option>
         <option value="7">Wekelijks</option>
         <option value="14">Tweewekelijks</option>
         <option value="30">Maandelijks</option>
@@ -1308,8 +1320,19 @@ function getS(){
   if(!s.doneTasks) s.doneTasks={};
   if(!s.doneRec)   s.doneRec={};
   if(!s.backlog)   s.backlog=[];
-  if(!s.calUrl)       s.calUrl='';
+  if(!s.calUrl)        s.calUrl='';
   if(!s.periodicTasks) s.periodicTasks=defaultPeriodicTasks();
+  if(!s.vasteRoutines) s.vasteRoutines=defaultVasteRoutines();
+  if(!s.deps)          s.deps=[];
+  // Migratie v2: opschonen oude taken, vervangen takenstapel
+  if(!s.migV || s.migV<2){
+    s.recurring=(s.recurring||[]).filter(r=>!['r3','r4','r6','r7','r8'].includes(r.id));
+    s.periodicTasks=defaultPeriodicTasks();
+    s.vasteRoutines=defaultVasteRoutines();
+    s.migV=2;
+    localStorage.setItem('mijndag_v3',JSON.stringify(s));
+    localStorage.setItem('mijndag_ts',Date.now());
+  }
   return s;
 }
 
@@ -1335,7 +1358,7 @@ function navTo(page, btn){
   document.getElementById('page-'+page).classList.add('active');
   if(btn) btn.classList.add('active');
   if(page==='ritueel') renderRitueelPage();
-  if(page==='master')  renderMaster();
+  if(page==='master')  { renderMaster(); renderVasteRoutines(); }
   if(page==='inst'){
     const s=getS();
     const ki=document.getElementById('cal-api-key-input');
@@ -2259,54 +2282,108 @@ function deleteReading() {
 
 
 // ════════════════════════════════════════════════════════
+// VASTE ROUTINES
+// ════════════════════════════════════════════════════════
+const VR_FREQ_LABELS={4:'2x per week',7:'wekelijks',14:'tweewekelijks'};
+
+function renderVasteRoutines(){
+  const s=getS(); const now=Date.now();
+  const list=document.getElementById('vr-list');
+  if(!list) return;
+  list.innerHTML='';
+
+  // Afhankelijke taken die klaar zijn
+  const dueDeps=(s.deps||[]).filter(d=>new Date(d.dueAt).getTime()<=now);
+  dueDeps.forEach(d=>{
+    const div=document.createElement('div');
+    div.className='titem vr-dep';
+    div.onclick=()=>doneDep(d.id);
+    div.innerHTML=`
+      <div class="tchk"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+      <div class="per-text" style="flex:1">
+        <span class="per-name" style="color:var(--gold)">${d.name}</span>
+        <span class="per-meta">${d.duur} min · afgeleid van was/gordijnen</span>
+      </div>
+      <div class="epip geel"></div>`;
+    list.appendChild(div);
+  });
+
+  // Routines
+  (s.vasteRoutines||[]).forEach(r=>{
+    const days=r.lastDone?Math.floor((now-new Date(r.lastDone+'T12:00:00').getTime())/86400000):null;
+    const due=!r.lastDone||days>=r.freq;
+    const div=document.createElement('div');
+    div.className='titem'+(due?'':' vr-notdue');
+    div.style.pointerEvents='auto';
+    div.onclick=()=>doneVasteRoutine(r.id);
+    const lastText=!r.lastDone?'nog nooit':days===0?'vandaag':days===1?'gisteren':`${days} d geleden`;
+    const freqLabel=VR_FREQ_LABELS[r.freq]||`elke ${r.freq} dagen`;
+    div.innerHTML=`
+      <div class="tchk"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+      <div class="per-text" style="flex:1">
+        <span class="per-name">${r.name}${r.triggersDep?` <span style="font-size:10px;color:var(--muted)">→ ${r.triggersDep.name}</span>`:''}</span>
+        <span class="per-meta">${freqLabel} · ${lastText}</span>
+      </div>`;
+    list.appendChild(div);
+  });
+}
+
+function doneVasteRoutine(id){
+  const s=getS();
+  const r=s.vasteRoutines.find(r=>r.id===id);
+  if(!r) return;
+  r.lastDone=today();
+  if(r.triggersDep){
+    if(!s.deps) s.deps=[];
+    s.deps.push({id:'d'+Date.now(),name:r.triggersDep.name,duur:r.triggersDep.duur,
+      dueAt:new Date(Date.now()+r.triggersDep.delay*3600000).toISOString()});
+  }
+  ss(s); renderVasteRoutines();
+}
+
+function doneDep(id){
+  const s=getS();
+  s.deps=(s.deps||[]).filter(d=>d.id!==id);
+  ss(s); renderVasteRoutines();
+}
+
+// ════════════════════════════════════════════════════════
 // PERIODIEKE TAKEN (ROTATIESYSTEEM)
 // ════════════════════════════════════════════════════════
-const FREQ_LABELS={7:'wekelijks',14:'tweewekelijks',30:'maandelijks',60:'tweemaandelijks',90:'per kwartaal',180:'halfjaarlijks',365:'jaarlijks'};
+const FREQ_LABELS={4:'2x per week',7:'wekelijks',14:'tweewekelijks',30:'maandelijks',60:'tweemaandelijks',90:'per kwartaal',180:'halfjaarlijks',365:'jaarlijks'};
 
 function defaultPeriodicTasks(){
   return [
-    ['Prullenbak / containers checken',7],
-    ['Oud papier checken',7],
-    ['Was doen',7],
-    ['Garderobe uitzoeken — één plank/sectie',14],
-    ['Statiegeld wegbrengen',30],
-    ['Glas wegbrengen',30],
-    ['Kaptafel opruimen',30],
-    ['Afwasmachine zout en glansmiddel bijvullen',30],
-    ['Cosmetica langslopen',30],
-    ['Tandenborstelkoppen vervangen',30],
-    ['Wasmachinedeur rubber afvegen',30],
-    ['Afwasmachine filter reinigen',60],
-    ['Magnetron / combioven grondig schoonmaken',60],
-    ['Koffiemachine ontkalken',90],
-    ['Waterkoker ontkalken',90],
-    ['Make-up kwasten wassen',90],
-    ['Haarborstels schoonmaken',90],
-    ['Vlooien- en ontwormmiddel kat',90],
-    ['Budget doornemen',90],
-    ['Wasmachinefilter (pomp) reinigen',90],
-    ['Ventilatierooster stofzuigen',90],
-    ["Foto's backuppen",90],
-    ['Mappen / downloads opschonen',90],
-    ['Wachtwoorden checken',90],
-    ['Ramen lappen',180],
-    ['Winter-/zomerkleding omruilen',180],
-    ['Douchekop ontkalken',180],
-    ['Afzuigkap filters vervangen',180],
-    ['Medicijndoos op datum checken',180],
-    ['Rookmelder testen',180],
-    ['Koelkast afdichtingsrubber afvegen',180],
-    ['Kamerplanten verpotten',365],
-    ['Gordijnen wassen',365],
-    ['Tuintegels schoonmaken',365],
-    ['Koelkast / vriezer ontdooien en schoonmaken',365],
-    ['Dierenarts + vaccinaties kat',365],
-    ['Belastingaangifte indienen',365],
-    ['Zorgverzekering vergelijken',365],
-    ['Overige verzekeringen vergelijken',365],
-    ['Contacten opschonen telefoon',365],
-    ['Apps en abonnementen doornemen',365],
-  ].map(([name,freq],i)=>({id:'pt'+(i+1),name,freq,lastDone:null,skippedUntil:null}));
+    {id:'pn1', name:'Statiegeld wegbrengen',              freq:30,  duur:15,  lastDone:null, skippedUntil:null},
+    {id:'pn2', name:'Glas wegbrengen',                    freq:30,  duur:15,  lastDone:null, skippedUntil:null},
+    {id:'pn3', name:'Garderobe uitzoeken — één plank/sectie', freq:14, duur:30, lastDone:null, skippedUntil:null},
+    {id:'pn4', name:'Persoonlijke spullen schoonmaken',   freq:60,  duur:20,  lastDone:null, skippedUntil:null},
+    {id:'pn5', name:'Make-upkwasten wassen',              freq:90,  duur:15,  lastDone:null, skippedUntil:null},
+    {id:'pn6', name:'Vlooien/ontwormen kat',              freq:90,  duur:5,   lastDone:null, skippedUntil:null},
+    {id:'pn7', name:'Budget doornemen',                   freq:90,  duur:30,  lastDone:null, skippedUntil:null},
+    {id:'pn8', name:'Badkamerventilatie schoonmaken',     freq:180, duur:10,  lastDone:null, skippedUntil:null},
+    {id:'pn9', name:'Winter/zomerkleding omruilen',       freq:180, duur:60,  lastDone:null, skippedUntil:null},
+    {id:'pn10',name:'Gordijnen wassen',                   freq:365, duur:30,  lastDone:null, skippedUntil:null,
+      triggersDep:{name:'Gordijnen ophangen',duur:30,delay:3}},
+    {id:'pn11',name:'Kamerplanten verpotten',             freq:365, duur:90,  lastDone:null, skippedUntil:null},
+    {id:'pn12',name:'Cosmetica langslopen',               freq:365, duur:20,  lastDone:null, skippedUntil:null},
+    {id:'pn13',name:'Koelkast/vriezer schoonmaken',       freq:365, duur:240, lastDone:null, skippedUntil:null},
+    {id:'pn14',name:'Belastingaangifte indienen',         freq:365, duur:60,  lastDone:null, skippedUntil:null},
+    {id:'pn15',name:'Zorgverzekering vergelijken',        freq:365, duur:30,  lastDone:null, skippedUntil:null},
+    {id:'pn16',name:'Verzekeringen vergelijken',          freq:365, duur:30,  lastDone:null, skippedUntil:null},
+    {id:'pn17',name:'Tandarts + mondhygiënist inplannen', freq:365, duur:5,   lastDone:null, skippedUntil:null},
+    {id:'pn18',name:'Dierenarts + vaccinaties kat',       freq:365, duur:5,   lastDone:null, skippedUntil:null},
+  ];
+}
+
+function defaultVasteRoutines(){
+  return [
+    {id:'vr1',name:'Prullenbak / containers checken', freq:7,  lastDone:null},
+    {id:'vr2',name:'Planten water geven',             freq:7,  lastDone:null},
+    {id:'vr3',name:'Was doen',                        freq:4,  lastDone:null, triggersDep:{name:'Was vouwen',duur:20,delay:3}},
+    {id:'vr4',name:'Fuck-it basket leegmaken',        freq:14, lastDone:null},
+    {id:'vr5',name:'Oud papier wegbrengen',           freq:14, lastDone:null},
+  ];
 }
 
 function periodicUrgency(t){
@@ -2364,6 +2441,11 @@ function renderPeriodic(){
 function donePeriodic(id){
   const s=getS(); const t=s.periodicTasks.find(t=>t.id===id); if(!t) return;
   t.lastDone=today(); t.skippedUntil=null;
+  if(t.triggersDep){
+    if(!s.deps) s.deps=[];
+    s.deps.push({id:'d'+Date.now(),name:t.triggersDep.name,duur:t.triggersDep.duur,
+      dueAt:new Date(Date.now()+t.triggersDep.delay*3600000).toISOString()});
+  }
   ss(s); renderPeriodic();
 }
 
@@ -2710,6 +2792,7 @@ function init(){
   renderTasks();
   renderRec();
   renderPeriodic();
+  renderVasteRoutines();
   if(s.calApiKey&&s.calId){
     if(s.calCache&&s.calCache.date===td) renderCalEvents(s.calCache.events);
     else refreshCal();

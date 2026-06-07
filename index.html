@@ -836,6 +836,11 @@ body::before {
 
   <div class="scroll z1">
 
+    <!-- Ochtendoverzicht -->
+    <div class="card">
+      <div id="morning-overview"></div>
+    </div>
+
     <!-- Maan & seizoen mini -->
     <div class="card" onclick="navTo('ritueel', document.querySelectorAll('.nbtn')[2])">
       <div class="card-head">
@@ -1026,6 +1031,19 @@ body::before {
 
   <div class="scroll z1">
     <div class="card">
+      <div class="card-head"><span class="card-title">Weer</span></div>
+      <div class="sfield">
+        <label>Stad</label>
+        <input id="weather-city-input" placeholder="Amsterdam">
+        <label style="margin-top:10px;display:block">OpenWeatherMap API-sleutel</label>
+        <input id="weather-api-key-input" placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
+        <button class="sbtn" style="margin-top:10px" onclick="saveWeatherSettings()">Opslaan & laden</button>
+        <div id="weather-status" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
+        <div style="font-size:11px;color:var(--faint);margin-top:6px">Gratis account via openweathermap.org</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px;">
       <div class="card-head"><span class="card-title">Google Calendar</span></div>
       <div class="sfield">
         <label>API Sleutel</label>
@@ -1448,6 +1466,10 @@ function navTo(page, btn){
     const di=document.getElementById('drive-client-id-input');
     if(di) di.value=getDriveCID();
     updateDriveUI();
+    const wk=document.getElementById('weather-api-key-input');
+    const wc=document.getElementById('weather-city-input');
+    if(wk) wk.value=s.weatherApiKey||'';
+    if(wc) wc.value=s.weatherCity||'';
   }
   window.scrollTo(0,0);
 }
@@ -2884,6 +2906,102 @@ function saveEditTask(){
 }
 
 // ════════════════════════════════════════════════════════
+// OCHTENDOVERZICHT / WEER
+// ════════════════════════════════════════════════════════
+function weatherEmoji(icon){
+  const c=icon.replace('n','d');
+  return {'01d':'☀️','02d':'🌤','03d':'⛅','04d':'☁️','09d':'🌧','10d':'🌦','11d':'⛈','13d':'🌨','50d':'🌫'}[c]||'🌡';
+}
+
+function renderMorningOverview(err){
+  const el=document.getElementById('morning-overview');
+  if(!el) return;
+  const s=getS();
+  if(!s.weatherApiKey){
+    el.innerHTML='<div style="padding:12px 18px;font-size:12px;color:var(--muted)">Voeg een API-sleutel toe in Instellingen → Weer om het ochtendoverzicht te activeren.</div>';
+    return;
+  }
+  if(err){
+    el.innerHTML=`<div style="padding:12px 18px;font-size:12px;color:var(--rose)">${err}</div>`;
+    return;
+  }
+  const w=s.weatherCache;
+  if(!w||w.date!==today()){
+    el.innerHTML='<div style="padding:12px 18px;font-size:12px;color:var(--muted)">Weerdata laden…</div>';
+    return;
+  }
+  const emoji=weatherEmoji(w.icon);
+  el.innerHTML=`
+    <div style="padding:16px 18px">
+      <div style="display:flex;align-items:center;gap:14px">
+        <span style="font-size:40px;line-height:1">${emoji}</span>
+        <div style="flex:1">
+          <div style="font-size:28px;font-weight:700;color:var(--ink);font-family:'Libre Baskerville',serif">${w.temp}°</div>
+          <div style="font-size:12px;color:var(--ink2);margin-top:2px;text-transform:capitalize">${w.desc} · voelt als ${w.feelsLike}°</div>
+        </div>
+        <div style="text-align:right;font-size:11px;color:var(--muted)">💨 ${w.wind} km/u</div>
+      </div>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-size:13px;color:${w.rainToday?'var(--gold)':'var(--muted)'}">
+        ${w.rainToday?'🌧':'🌤'} ${w.rainText}
+      </div>
+    </div>`;
+}
+
+async function fetchWeather(){
+  const s=getS();
+  const key=s.weatherApiKey; if(!key) return;
+  const city=s.weatherCity||'Amsterdam';
+  const td=today();
+  if(s.weatherCache?.date===td){ renderMorningOverview(); return; }
+  renderMorningOverview(); // show "laden"
+  try{
+    const [cr,fr]=await Promise.all([
+      fetch(`https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${key}&units=metric&lang=nl`),
+      fetch(`https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(city)}&appid=${key}&units=metric&lang=nl&cnt=8`)
+    ]);
+    if(!cr.ok){ renderMorningOverview('Kon weerdata niet laden — check API-sleutel en stad'); return; }
+    const cur=await cr.json();
+    const fc=fr.ok?await fr.json():null;
+    const temp=Math.round(cur.main.temp);
+    const feelsLike=Math.round(cur.main.feels_like);
+    const icon=cur.weather[0].icon;
+    const desc=cur.weather[0].description;
+    const wind=Math.round((cur.wind?.speed||0)*3.6);
+    // Regen vandaag uit forecast
+    let rainToday=false, rainText='Geen regen verwacht';
+    if(fc?.list){
+      const rainItems=fc.list.filter(item=>{
+        if(!item.dt_txt.startsWith(td)) return false;
+        const id=item.weather[0].id;
+        return (id>=200&&id<700)||(item.rain&&item.rain['3h']>0)||(item.snow&&item.snow['3h']>0);
+      });
+      if(rainItems.length>0){
+        rainToday=true;
+        const times=rainItems.map(i=>i.dt_txt.substring(11,16));
+        rainText=`Regen verwacht rond ${times[0]}${times.length>1?' – '+times[times.length-1]:''}`;
+      }
+    }
+    const fresh=getS();
+    fresh.weatherCache={date:td,temp,feelsLike,icon,desc,wind,rainToday,rainText};
+    ss(fresh);
+    renderMorningOverview();
+  }catch(e){
+    renderMorningOverview('Fout bij laden weerdata');
+    console.error(e);
+  }
+}
+
+function saveWeatherSettings(){
+  const key=document.getElementById('weather-api-key-input').value.trim();
+  const city=document.getElementById('weather-city-input').value.trim()||'Amsterdam';
+  const s=getS();
+  s.weatherApiKey=key; s.weatherCity=city; s.weatherCache=null;
+  ss(s);
+  document.getElementById('weather-status').textContent=key?'✓ Opgeslagen':'Vul een API-sleutel in';
+  if(key) fetchWeather();
+}
+
+// ════════════════════════════════════════════════════════
 // GOOGLE DRIVE SYNC
 // ════════════════════════════════════════════════════════
 let _driveToken = null;
@@ -3048,6 +3166,8 @@ function init(){
     const h=document.getElementById('ehint');
     h.textContent=EHINTS[savedE]; h.className=`ehint visible ${savedE}`;
   }
+  renderMorningOverview();
+  fetchWeather();
   renderRitualMini();
   renderTasks();
   renderRec();

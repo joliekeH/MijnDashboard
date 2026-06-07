@@ -943,7 +943,10 @@ body::before {
 
     <!-- Vaste routines -->
     <div class="card">
-      <div class="card-head"><span class="card-title">Vaste routines</span></div>
+      <div class="card-head">
+        <span class="card-title">Vaste routines</span>
+        <button class="card-btn" onclick="openM('m-new-routine')">+ Toevoegen</button>
+      </div>
       <div id="vr-list"></div>
     </div>
 
@@ -1132,6 +1135,26 @@ body::before {
   </div>
 </div>
 
+
+<!-- Nieuwe vaste routine -->
+<div class="moverlay" id="m-new-routine" onclick="closeM(event,'m-new-routine')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Vaste routine</div>
+    <div class="mfield"><label>Naam</label><input id="nr-name" placeholder="Bijv. Brievenbus legen"></div>
+    <div class="mfield"><label>Hoe vaak</label>
+      <select id="nr-freq">
+        <option value="4">2x per week</option>
+        <option value="7" selected>Wekelijks</option>
+        <option value="14">Tweewekelijks</option>
+      </select>
+    </div>
+    <div class="mactions">
+      <button class="mbtn-c" onclick="closeM(null,'m-new-routine')">Annuleren</button>
+      <button class="mbtn-p" onclick="saveNewRoutine()">Toevoegen</button>
+    </div>
+  </div>
+</div>
 
 <!-- Nieuwe periodieke taak -->
 <div class="moverlay" id="m-new-periodic" onclick="closeM(event,'m-new-periodic')">
@@ -2326,6 +2349,15 @@ function renderVasteRoutines(){
       </div>`;
     list.appendChild(div);
   });
+}
+
+function saveNewRoutine(){
+  const name=document.getElementById('nr-name').value.trim(); if(!name) return;
+  const freq=parseInt(document.getElementById('nr-freq').value);
+  const s=getS();
+  s.vasteRoutines.push({id:'vr'+Date.now(),name,freq,lastDone:null});
+  ss(s); closeM(null,'m-new-routine'); renderVasteRoutines();
+  document.getElementById('nr-name').value='';
 }
 
 function doneVasteRoutine(id){

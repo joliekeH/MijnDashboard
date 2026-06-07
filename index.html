@@ -909,6 +909,12 @@ body::before {
       <div class="tpane" id="tp-maand"></div>
     </div>
 
+    <!-- Compact routines -->
+    <div class="card">
+      <div class="card-head"><span class="card-title">Routines</span></div>
+      <div id="dag-vr-list"></div>
+    </div>
+
     <!-- Periodiek -->
     <div class="card">
       <div class="card-head">
@@ -1136,6 +1142,43 @@ body::before {
 </div>
 
 
+<!-- Apparaten onderhouden -->
+<div class="moverlay" id="m-apparaten" onclick="closeApparaatModal(event)">
+  <div class="modal" style="max-height:80vh;display:flex;flex-direction:column">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Apparaten onderhouden</div>
+    <div style="font-size:12px;color:var(--muted);padding-bottom:10px">~60 min · Vink af wat je doet — klok wordt teruggezet</div>
+    <div id="ap-list" style="overflow-y:auto;flex:1;margin:0 -18px;padding:0 18px"></div>
+    <div class="mactions" style="flex-shrink:0">
+      <button class="mbtn-p" style="width:100%" onclick="closeApparaten()">Klaar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Subtaak notitie -->
+<div class="moverlay" id="m-ap-note" onclick="closeM(event,'m-ap-note')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="ap-note-title" style="font-size:15px"></div>
+    <div id="ap-note-body" style="font-size:13px;color:var(--ink2);line-height:1.8;white-space:pre-line;margin-top:8px"></div>
+    <div class="mactions"><button class="mbtn-p" onclick="closeM(null,'m-ap-note')">Sluiten</button></div>
+  </div>
+</div>
+
+<!-- Periodieke taak notitie -->
+<div class="moverlay" id="m-task-note" onclick="closeM(event,'m-task-note')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="task-note-title" style="font-size:15px"></div>
+    <input type="hidden" id="task-note-id">
+    <textarea id="task-note-body" placeholder="Stappen, herinneringen, notities…" style="width:100%;min-height:120px;background:var(--bg2);border:1px solid var(--border2);border-radius:12px;color:var(--ink);font-family:'Quicksand',sans-serif;font-size:13px;padding:10px 12px;outline:none;resize:vertical;line-height:1.6;margin-top:8px"></textarea>
+    <div class="mactions">
+      <button class="mbtn-c" onclick="closeM(null,'m-task-note')">Annuleren</button>
+      <button class="mbtn-p" onclick="saveTaskNote()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
 <!-- Nieuwe vaste routine -->
 <div class="moverlay" id="m-new-routine" onclick="closeM(event,'m-new-routine')">
   <div class="modal">
@@ -1347,12 +1390,26 @@ function getS(){
   if(!s.periodicTasks) s.periodicTasks=defaultPeriodicTasks();
   if(!s.vasteRoutines) s.vasteRoutines=defaultVasteRoutines();
   if(!s.deps)          s.deps=[];
-  // Migratie v2: opschonen oude taken, vervangen takenstapel
+  if(!s.apparaten)     s.apparaten=defaultApparaten();
+  // Migratie v2
   if(!s.migV || s.migV<2){
     s.recurring=(s.recurring||[]).filter(r=>!['r3','r4','r6','r7','r8'].includes(r.id));
     s.periodicTasks=defaultPeriodicTasks();
     s.vasteRoutines=defaultVasteRoutines();
     s.migV=2;
+    localStorage.setItem('mijndag_v3',JSON.stringify(s));
+    localStorage.setItem('mijndag_ts',Date.now());
+  }
+  // Migratie v3: notes toevoegen aan bestaande taken + apparaten
+  if(s.migV<3){
+    const nd=defaultPeriodicTasks();
+    s.periodicTasks=(s.periodicTasks||[]).map(t=>{
+      const def=nd.find(d=>d.id===t.id);
+      return def?{...def,lastDone:t.lastDone,skippedUntil:t.skippedUntil}:t;
+    });
+    nd.forEach(d=>{ if(!s.periodicTasks.find(t=>t.id===d.id)) s.periodicTasks.push(d); });
+    if(!s.apparaten||!s.apparaten.subtasks) s.apparaten=defaultApparaten();
+    s.migV=3;
     localStorage.setItem('mijndag_v3',JSON.stringify(s));
     localStorage.setItem('mijndag_ts',Date.now());
   }
@@ -2305,6 +2362,128 @@ function deleteReading() {
 
 
 // ════════════════════════════════════════════════════════
+// APPARATEN ONDERHOUDEN
+// ════════════════════════════════════════════════════════
+let _apTicked = new Set();
+
+function openApparaten(){
+  _apTicked.clear();
+  renderApparaatSubtasks();
+  document.getElementById('m-apparaten').classList.add('open');
+}
+
+function closeApparaatModal(e){
+  if(e&&e.target!==document.getElementById('m-apparaten')) return;
+  closeApparaten();
+}
+
+function closeApparaten(){
+  if(_apTicked.size>0){
+    const s=getS();
+    s.apparaten.lastDone=today();
+    s.apparaten.skippedUntil=null;
+    // Update lastDone for ticked subtasks
+    _apTicked.forEach(aid=>{
+      const st=s.apparaten.subtasks.find(x=>x.id===aid);
+      if(st) st.lastDone=today();
+    });
+    ss(s); renderPeriodic();
+  }
+  document.getElementById('m-apparaten').classList.remove('open');
+}
+
+function renderApparaatSubtasks(){
+  const s=getS(); const now=Date.now();
+  const list=document.getElementById('ap-list');
+  if(!list) return;
+  list.innerHTML='';
+  (s.apparaten?.subtasks||[]).forEach(st=>{
+    const days=st.lastDone?Math.floor((now-new Date(st.lastDone+'T12:00:00').getTime())/86400000):null;
+    const due=!st.lastDone||(days>=st.freq);
+    const ticked=_apTicked.has(st.id);
+    const div=document.createElement('div');
+    div.className='titem'+(ticked?' done':'')+(due?'':' vr-notdue');
+    div.style.pointerEvents='auto';
+    div.onclick=()=>toggleApparaatSubtask(st.id);
+    const freqLabel=FREQ_LABELS[st.freq]||`elke ${st.freq} d`;
+    const lastText=!st.lastDone?'nog nooit':days===0?'vandaag':days===1?'gisteren':`${days}d geleden`;
+    div.innerHTML=`
+      <div class="tchk"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+      <div class="per-text" style="flex:1">
+        <span class="per-name">${st.name}</span>
+        <span class="per-meta">${freqLabel} · ${lastText}</span>
+      </div>
+      ${st.note?`<button class="editbtn" onclick="event.stopPropagation();openApNote('${st.id}')" style="font-size:13px">ℹ</button>`:''}`;
+    list.appendChild(div);
+  });
+}
+
+function toggleApparaatSubtask(id){
+  if(_apTicked.has(id)) _apTicked.delete(id); else _apTicked.add(id);
+  renderApparaatSubtasks();
+}
+
+function openApNote(id){
+  const s=getS();
+  const st=(s.apparaten?.subtasks||[]).find(x=>x.id===id);
+  if(!st||!st.note) return;
+  document.getElementById('ap-note-title').textContent=st.name;
+  document.getElementById('ap-note-body').textContent=st.note;
+  openM('m-ap-note');
+}
+
+function openTaskNote(id){
+  if(id==='__ap__') return;
+  const s=getS(); const t=s.periodicTasks.find(t=>t.id===id); if(!t) return;
+  document.getElementById('task-note-id').value=id;
+  document.getElementById('task-note-title').textContent=t.name;
+  document.getElementById('task-note-body').value=t.note||'';
+  openM('m-task-note');
+}
+
+function saveTaskNote(){
+  const id=document.getElementById('task-note-id').value;
+  const note=document.getElementById('task-note-body').value;
+  const s=getS(); const t=s.periodicTasks.find(t=>t.id===id); if(!t) return;
+  t.note=note; ss(s); closeM(null,'m-task-note');
+}
+
+// ════════════════════════════════════════════════════════
+// DAG-PAGINA ROUTINES (compact)
+// ════════════════════════════════════════════════════════
+function renderDagRoutines(){
+  const s=getS(); const now=Date.now();
+  const list=document.getElementById('dag-vr-list');
+  if(!list) return;
+  list.innerHTML='';
+  const dueDeps=(s.deps||[]).filter(d=>new Date(d.dueAt).getTime()<=now);
+  dueDeps.forEach(d=>{
+    const div=document.createElement('div');
+    div.className='titem vr-dep';
+    div.onclick=()=>{ doneDep(d.id); renderDagRoutines(); };
+    div.innerHTML=`
+      <div class="tchk"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+      <span class="tname" style="color:var(--gold)">${d.name}</span>
+      ${d.duur?`<span class="dur-badge">${d.duur} min</span>`:''}`;
+    list.appendChild(div);
+  });
+  (s.vasteRoutines||[]).forEach(r=>{
+    const days=r.lastDone?Math.floor((now-new Date(r.lastDone+'T12:00:00').getTime())/86400000):null;
+    const due=!r.lastDone||days>=r.freq;
+    const div=document.createElement('div');
+    div.className='titem'+(due?'':' vr-notdue');
+    div.style.pointerEvents='auto';
+    div.onclick=()=>{ doneVasteRoutine(r.id); renderDagRoutines(); renderVasteRoutines(); };
+    const lastText=!r.lastDone?'nog nooit':days===0?'✓ vandaag':days===1?'gisteren':`${days}d geleden`;
+    div.innerHTML=`
+      <div class="tchk"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+      <span class="tname">${r.name}</span>
+      <span style="font-size:11px;color:${due?'var(--ember)':'var(--muted)'};flex-shrink:0">${lastText}</span>`;
+    list.appendChild(div);
+  });
+}
+
+// ════════════════════════════════════════════════════════
 // VASTE ROUTINES
 // ════════════════════════════════════════════════════════
 const VR_FREQ_LABELS={4:'2x per week',7:'wekelijks',14:'tweewekelijks'};
@@ -2389,23 +2568,59 @@ function defaultPeriodicTasks(){
     {id:'pn1', name:'Statiegeld wegbrengen',              freq:30,  duur:15,  lastDone:null, skippedUntil:null},
     {id:'pn2', name:'Glas wegbrengen',                    freq:30,  duur:15,  lastDone:null, skippedUntil:null},
     {id:'pn3', name:'Garderobe uitzoeken — één plank/sectie', freq:14, duur:30, lastDone:null, skippedUntil:null},
-    {id:'pn4', name:'Persoonlijke spullen schoonmaken',   freq:60,  duur:20,  lastDone:null, skippedUntil:null},
-    {id:'pn5', name:'Make-upkwasten wassen',              freq:90,  duur:15,  lastDone:null, skippedUntil:null},
-    {id:'pn6', name:'Vlooien/ontwormen kat',              freq:90,  duur:5,   lastDone:null, skippedUntil:null},
-    {id:'pn7', name:'Budget doornemen',                   freq:90,  duur:30,  lastDone:null, skippedUntil:null},
-    {id:'pn8', name:'Badkamerventilatie schoonmaken',     freq:180, duur:10,  lastDone:null, skippedUntil:null},
-    {id:'pn9', name:'Winter/zomerkleding omruilen',       freq:180, duur:60,  lastDone:null, skippedUntil:null},
+    {id:'pn4', name:'Persoonlijke spullen schoonmaken',   freq:60,  duur:20,  lastDone:null, skippedUntil:null,
+      note:'Telefoon + hoesje afvegen\nWaterfles deep clean — borstel door de fles\nKoffiebeker/travel mug deep clean\nEarbuds + case schoonmaken\nTandenborstelkop vervangen'},
+    {id:'pn5', name:'Make-upkwasten wassen',              freq:90,  duur:15,  lastDone:null, skippedUntil:null,
+      note:'Kwasten wassen met milde shampoo of kwastenreiniger\nUitknijpen en liggend laten drogen — nooit rechtop, water beschadigt de lijm'},
+    {id:'pn6', name:'Vlooien/ontwormen kat',              freq:90,  duur:5,   lastDone:null, skippedUntil:null,
+      note:'Vlooienmiddel: pipetje in de nek tussen de schouderbladen\nOntworming: tablet of pasta, check verpakking voor gewicht/dosering\nNiet op dezelfde dag — houd een paar dagen tussenruimte aan'},
+    {id:'pn7', name:'Budget doornemen',                   freq:90,  duur:30,  lastDone:null, skippedUntil:null,
+      note:'Bankapp — kloppen de vaste lasten?\nAbonnementen — betaal je nog voor alles?\nSpaarstand — op schema?'},
+    {id:'pn8', name:'Badkamerventilatie schoonmaken',     freq:180, duur:10,  lastDone:null, skippedUntil:null,
+      note:'Rooster eraf trekken of losschroeven\nStofzuiger ertegenaan\nRooster afspoelen, terugplaatsen'},
+    {id:'pn9', name:'Winter/zomerkleding omruilen',       freq:180, duur:60,  lastDone:null, skippedUntil:null,
+      note:'Winterkleding → zomer: maart/april\nZomerkleding → winter: oktober/november\nVakuümzakken of opbergdozen voor het seizoen dat er uit gaat'},
     {id:'pn10',name:'Gordijnen wassen',                   freq:365, duur:30,  lastDone:null, skippedUntil:null,
       triggersDep:{name:'Gordijnen ophangen',duur:30,delay:3}},
     {id:'pn11',name:'Kamerplanten verpotten',             freq:365, duur:90,  lastDone:null, skippedUntil:null},
     {id:'pn12',name:'Cosmetica langslopen',               freq:365, duur:20,  lastDone:null, skippedUntil:null},
-    {id:'pn13',name:'Koelkast/vriezer schoonmaken',       freq:365, duur:240, lastDone:null, skippedUntil:null},
-    {id:'pn14',name:'Belastingaangifte indienen',         freq:365, duur:60,  lastDone:null, skippedUntil:null},
-    {id:'pn15',name:'Zorgverzekering vergelijken',        freq:365, duur:30,  lastDone:null, skippedUntil:null},
-    {id:'pn16',name:'Verzekeringen vergelijken',          freq:365, duur:30,  lastDone:null, skippedUntil:null},
+    {id:'pn13',name:'Koelkast/vriezer schoonmaken',       freq:365, duur:240, lastDone:null, skippedUntil:null,
+      note:'Plan vlak voor boodschappen zodat koelkast al leeg is\nEten uit koelkast op aanrecht — vlees/vis/zuivel eerst verwerken\nVriezer: deur open, handdoek eronder, laten ontdooien (~3-4 uur)\nKoelkast binnenkant afvegen, planken afspoelen\nAanzuigfilter onderin stofzuigen\nAls vriezer ontdooid: afdrogen en alles terugzetten'},
+    {id:'pn14',name:'Belastingaangifte indienen',         freq:365, duur:60,  lastDone:null, skippedUntil:null,
+      note:'DigiD bij de hand\nJaaropgave(n) van werkgever\nInloggen via belastingdienst.nl — vaak vooringevuld, nakijken en aanvullen\nDeadline: 1 mei (streefdatum: 1 april)'},
+    {id:'pn15',name:'Zorgverzekering vergelijken',        freq:365, duur:30,  lastDone:null, skippedUntil:null,
+      note:'Elk jaar vóór 1 januari wisselen als je wilt\nVergelijk via vergelijkingssite — let op eigen risico en vergoedingen\nDecember is het moment'},
+    {id:'pn16',name:'Verzekeringen vergelijken',          freq:365, duur:30,  lastDone:null, skippedUntil:null,
+      note:'Inboedel + aansprakelijkheid — check via vergelijkingssite\nHuidige polissen nakijken op dekking'},
     {id:'pn17',name:'Tandarts + mondhygiënist inplannen', freq:365, duur:5,   lastDone:null, skippedUntil:null},
     {id:'pn18',name:'Dierenarts + vaccinaties kat',       freq:365, duur:5,   lastDone:null, skippedUntil:null},
   ];
+}
+
+function defaultApparaten(){
+  return {
+    lastDone:null, skippedUntil:null,
+    subtasks:[
+      {id:'ap1',name:'Afzuigkap vetfilters in de vaatwasser',freq:30,lastDone:null,
+        note:'Filters eruit klikken en in de vaatwasser — onderkant van de machine\nNa de vaatwasser terugklikken'},
+      {id:'ap2',name:'Afwasmachine filter reinigen + zout/glansmiddel',freq:30,lastDone:null,
+        note:'Filter onderin draaien en optillen, afspoelen onder de kraan, terugplaatsen\nMeteen even zout en glansmiddel checken en bijvullen'},
+      {id:'ap3',name:'Wasmachinefilter reinigen',freq:90,lastDone:null,
+        note:'Klepje open, slangetje naar buiten trekken, bak eronder en leeg laten lopen\nHanddoek eronder, grote dop draaien, filter schoonmaken\nAlles weer dichtmaken en stevig aandraaien'},
+      {id:'ap4',name:'Droger warmtewisselaar reinigen',freq:90,lastDone:null,
+        note:'Klep onderin openen, binnendeksel ontgrendelen en verwijderen\nReinigen met meegeleverde borstel — verticale bewegingen, niet te hard\nBinnendeksel terugplaatsen en vergrendelen\nTip: laat klep even open zodat stof kan opdrogen voor je begint'},
+      {id:'ap5',name:'Koffiemachine ontkalken — Dedica',freq:90,lastDone:null,
+        note:'Giet 1 portie vloeistof in volle tank, haal koffiemandje weg, zet bak onder\nHoud stoomknop 10 sec ingedrukt tot knoppen om de beurt knipperen\nZet hendel open en druk stoomknop in om te starten\nTijdens spoelen hendel af en toe even dichtdraaien\nHerhaal met volle tank schoon water voor naspoelen'},
+      {id:'ap6',name:'Waterkoker ontkalken',freq:90,lastDone:null,
+        note:'Vul halfvol met 50% water + 50% azijn — niet tot MAX, het schuimt\nAan de kook brengen, 15 minuten laten staan, leeggieten\nNaspoelen: een paar keer vers water koken en weggooien tot azijngeur weg is'},
+      {id:'ap7',name:'Afwasmachine filter reinigen (diep)',freq:90,lastDone:null,
+        note:'Filter onderin eruit, afspoelen\nControleer ook de sproeiarm op verstoppingen\nZout en glansmiddel bijvullen'},
+      {id:'ap8',name:'Afzuigkap koolstoffilter vervangen',freq:365,lastDone:null,
+        note:'Filter zit achter de vetfilters — vetfilters eerst eruit\nOud filter eruit draaien of losklikken, nieuw filter plaatsen\nBestellen: Siemens LC94BBC50/01, partnummer 00296178\nVia onderdelen.nl of siemens-home.bsh-group.com'},
+      {id:'ap9',name:'Rookmelder testen',freq:365,lastDone:null,
+        note:'Knopje indrukken tot het piept, loslaten'},
+    ]
+  };
 }
 
 function defaultVasteRoutines(){
@@ -2432,7 +2647,12 @@ function isDue(t){
 
 function renderPeriodic(){
   const s=getS(); const tasks=s.periodicTasks||[];
-  const due=tasks.filter(isDue);
+  // Voeg apparaten virtual task toe
+  const ap=s.apparaten||{lastDone:null,skippedUntil:null};
+  const apTask={id:'__ap__',name:'Apparaten onderhouden',freq:30,duur:60,
+    lastDone:ap.lastDone,skippedUntil:ap.skippedUntil,isApparaten:true};
+  const allTasks=[...tasks,apTask];
+  const due=allTasks.filter(isDue);
   const visible=[...due].sort((a,b)=>periodicUrgency(b)-periodicUrgency(a)).slice(0,5);
   const countEl=document.getElementById('periodic-count');
   if(countEl) countEl.textContent=due.length>5?`${due.length} klaar`:due.length||'✓';
@@ -2452,14 +2672,16 @@ function renderPeriodic(){
     const lastText=!t.lastDone?'nog nooit':days===0?'vandaag':days===1?'gisteren':`${days} dagen geleden`;
     const freqLabel=FREQ_LABELS[t.freq]||`elke ${t.freq} dagen`;
     const pDurBadge=t.duur?`<span class="dur-badge">${t.duur} min</span>`:'';
+    const noteBtn=t.note?`<button class="editbtn" onclick="event.stopPropagation();openTaskNote('${t.id}')" style="flex-shrink:0;font-size:13px">ℹ</button>`:'';
+    const editBtn=t.isApparaten?'':`<button class="editbtn" onclick="event.stopPropagation();openEditPeriodic('${t.id}')" style="flex-shrink:0">✎</button>`;
     div.innerHTML=`
       <div class="per-text">
-        <span class="per-name">${t.name}</span>
+        <span class="per-name">${t.name}${t.isApparaten?' <span style="font-size:10px;color:var(--muted)">→ subtaken</span>':''}</span>
         <span class="per-meta">${freqLabel} · ${lastText}${t.duur?' · '+t.duur+' min':''}</span>
       </div>
-      <button class="skip-btn" onclick="skipPeriodic('${t.id}')">Later</button>
-      <button class="editbtn" onclick="openEditPeriodic('${t.id}')" style="flex-shrink:0">✎</button>
-      <button class="per-check" onclick="donePeriodic('${t.id}')">✓</button>`;
+      <button class="skip-btn" onclick="event.stopPropagation();skipPeriodic('${t.id}')">Later</button>
+      ${noteBtn}${editBtn}
+      <button class="per-check" onclick="event.stopPropagation();donePeriodic('${t.id}')">✓</button>`;
     list.appendChild(div);
   });
   if(due.length>5){
@@ -2471,6 +2693,7 @@ function renderPeriodic(){
 }
 
 function donePeriodic(id){
+  if(id==='__ap__'){ openApparaten(); return; }
   const s=getS(); const t=s.periodicTasks.find(t=>t.id===id); if(!t) return;
   t.lastDone=today(); t.skippedUntil=null;
   if(t.triggersDep){
@@ -2482,6 +2705,11 @@ function donePeriodic(id){
 }
 
 function skipPeriodic(id){
+  if(id==='__ap__'){
+    const s=getS();
+    s.apparaten.skippedUntil=new Date(Date.now()+24*60*60*1000).toISOString();
+    ss(s); renderPeriodic(); return;
+  }
   const s=getS(); const t=s.periodicTasks.find(t=>t.id===id); if(!t) return;
   t.skippedUntil=new Date(Date.now()+24*60*60*1000).toISOString();
   ss(s); renderPeriodic();
@@ -2825,6 +3053,7 @@ function init(){
   renderRec();
   renderPeriodic();
   renderVasteRoutines();
+  renderDagRoutines();
   if(s.calApiKey&&s.calId){
     if(s.calCache&&s.calCache.date===td) renderCalEvents(s.calCache.events);
     else refreshCal();

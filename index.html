@@ -2963,7 +2963,13 @@ async function fetchWeather(){
       fetch(`https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${key}&units=metric&lang=nl`),
       fetch(`https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(city)}&appid=${key}&units=metric&lang=nl&cnt=8`)
     ]);
-    if(!cr.ok){ renderMorningOverview('Kon weerdata niet laden — check API-sleutel en stad'); return; }
+    if(!cr.ok){
+      const errJson=await cr.json().catch(()=>({}));
+      const msg=cr.status===401?'API-sleutel ongeldig of nog niet actief (wacht tot 2 uur na aanmaken)':
+                cr.status===404?`Stad "${city}" niet gevonden — probeer Engels (bijv. "Amsterdam")`:
+                `Fout ${cr.status}: ${errJson.message||'onbekend'}`;
+      renderMorningOverview(msg); return;
+    }
     const cur=await cr.json();
     const fc=fr.ok?await fr.json():null;
     const temp=Math.round(cur.main.temp);

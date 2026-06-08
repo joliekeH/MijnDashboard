@@ -806,12 +806,12 @@ body::before {
 <div class="page active z1" id="page-dag">
 
   <div class="header z1">
-    <div class="header-row">
+    <div class="header-row" style="display:flex;align-items:flex-start;justify-content:space-between">
       <div>
         <div class="greeting" id="greeting">Goedemorgen</div>
         <div class="date-str" id="date-str">—</div>
       </div>
-      <div class="season-chip" id="season-chip">🌱 Lente</div>
+      <div id="seasonal-strip" style="text-align:right;font-size:11px;color:var(--muted);line-height:1.85;margin-top:3px;flex-shrink:0"></div>
     </div>
   </div>
 
@@ -839,15 +839,6 @@ body::before {
     <!-- Ochtendoverzicht -->
     <div class="card">
       <div id="morning-overview"></div>
-    </div>
-
-    <!-- Maan & seizoen mini -->
-    <div class="card" onclick="navTo('ritueel', document.querySelectorAll('.nbtn')[2])">
-      <div class="card-head">
-        <span class="card-title">✦ Seizoen & Maan</span>
-        <span style="font-size:12px;color:var(--muted)">→</span>
-      </div>
-      <div class="ritual-tiles" id="ritual-mini-tiles"></div>
     </div>
 
     <!-- Agenda -->
@@ -1481,6 +1472,38 @@ function navTo(page, btn){
 // ════════════════════════════════════════════════════════
 // HEADER
 // ════════════════════════════════════════════════════════
+function getHeaderMicroSeason(){
+  const now=new Date(); const m=now.getMonth(); const d=now.getDate(); const md=m*100+d;
+  const S=[
+    {s:20,  name:'Midden winter', icon:'⭐'},
+    {s:119, name:'Einde winter',  icon:'❄️'},
+    {s:221, name:'Begin lente',   icon:'🌱'},
+    {s:320, name:'Midden lente',  icon:'🌸'},
+    {s:421, name:'Einde lente',   icon:'🌿'},
+    {s:521, name:'Begin zomer',   icon:'☀️'},
+    {s:623, name:'Midden zomer',  icon:'🌻'},
+    {s:723, name:'Einde zomer',   icon:'🌾'},
+    {s:822, name:'Begin herfst',  icon:'🍂'},
+    {s:923, name:'Midden herfst', icon:'🍁'},
+    {s:1022,name:'Einde herfst',  icon:'🦔'},
+    {s:1121,name:'Begin winter',  icon:'🕯️'},
+  ];
+  let cur={name:'Begin winter',icon:'🕯️'};
+  for(let i=S.length-1;i>=0;i--){ if(md>=S[i].s){cur=S[i];break;} }
+  return cur;
+}
+
+function getNextSabbatStrip(){
+  const now=new Date(); const year=now.getFullYear();
+  const all=[...getSabbats(year),...getSabbats(year+1)];
+  const future=all.filter(s=>{
+    const diff=Math.ceil((s.date-now)/86400000);
+    return diff>=0&&diff<=42;
+  });
+  if(!future.length) return null;
+  return {name:future[0].name, icon:future[0].icon, days:Math.ceil((future[0].date-now)/86400000)};
+}
+
 function initHeader(){
   const now=new Date();
   const h=now.getHours();
@@ -1490,10 +1513,14 @@ function initHeader(){
   const months=['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
   document.getElementById('date-str').textContent=
     `${days[now.getDay()]} ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
-  const m=now.getMonth();
-  const seasons=[[11,0,1,'❄️ Winter'],[2,3,4,'🌱 Lente'],[5,6,7,'☀️ Zomer'],[8,9,10,'🍂 Herfst']];
-  for(const [a,b,c,l] of seasons){
-    if([a,b,c].includes(m)){ document.getElementById('season-chip').textContent=l; break; }
+  const strip=document.getElementById('seasonal-strip');
+  if(strip){
+    const micro=getHeaderMicroSeason();
+    const moon=moonPhase(now);
+    const sabbat=getNextSabbatStrip();
+    let html=`<div>${micro.icon} ${micro.name}</div><div>${moon.icon} ${moon.name}</div>`;
+    if(sabbat) html+=`<div>${sabbat.icon ? sabbat.icon+' ' : ''}${sabbat.name} · ${sabbat.days}d</div>`;
+    strip.innerHTML=html;
   }
 }
 

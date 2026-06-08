@@ -1635,7 +1635,9 @@ function renderRitualMini(){
   const duLabel=relevant.isPast
     ? (relevant.daysSince===0?'Vandaag':relevant.daysSince===1?'Gisteren':`${relevant.daysSince} dagen geleden`)
     : (relevant.daysUntil===0?'Vandaag':relevant.daysUntil===1?'Morgen':`Over ${relevant.daysUntil} dagen`);
-  document.getElementById('ritual-mini-tiles').innerHTML=`
+  const rmt=document.getElementById('ritual-mini-tiles');
+  if(!rmt) return;
+  rmt.innerHTML=`
     <div class="rtile">
       <div class="ricon">${moon.icon}</div>
       <div class="rlabel">Maanfase</div>

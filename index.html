@@ -806,12 +806,12 @@ body::before {
 <div class="page active z1" id="page-dag">
 
   <div class="header z1">
-    <div class="header-row" style="display:flex;align-items:flex-start;justify-content:space-between">
+    <div class="header-row">
       <div>
         <div class="greeting" id="greeting">Goedemorgen</div>
         <div class="date-str" id="date-str">—</div>
+        <div id="seasonal-strip" style="font-size:11px;color:var(--muted);margin-top:5px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;line-height:1.6"></div>
       </div>
-      <div id="seasonal-strip" style="text-align:right;font-size:11px;color:var(--muted);line-height:1.85;margin-top:3px;flex-shrink:0"></div>
     </div>
   </div>
 
@@ -1518,8 +1518,9 @@ function initHeader(){
     const micro=getHeaderMicroSeason();
     const moon=moonPhase(now);
     const sabbat=getNextSabbatStrip();
-    let html=`<div>${micro.icon} ${micro.name}</div><div>${moon.icon} ${moon.name}</div>`;
-    if(sabbat) html+=`<div>${sabbat.icon ? sabbat.icon+' ' : ''}${sabbat.name} · ${sabbat.days}d</div>`;
+    const sep='<span style="color:var(--faint)">·</span>';
+    let html=`<span>${micro.icon} ${micro.name}</span>${sep}<span>${moon.icon} ${moon.name}</span>`;
+    if(sabbat) html+=`${sep}<span>${sabbat.name} · ${sabbat.days}d</span>`;
     strip.innerHTML=html;
   }
 }

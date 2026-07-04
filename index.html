@@ -356,7 +356,7 @@ body::before {
 }
 .per-item:last-child { border-bottom: none; }
 .per-text { flex: 1; min-width: 0; }
-.per-name { display: block; font-size: 14px; color: var(--ink2); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.per-name { display: block; font-size: 14px; color: var(--ink2); font-weight: 500; }
 .per-meta { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; }
 .per-item.per-overdue .per-name { color: var(--rose); }
 .per-item.per-overdue .per-meta { color: var(--rose-dim); }
@@ -1707,6 +1707,18 @@ function moonPhase(date){
   return              {name:'Bijna nieuw',icon:'🌘',age:phase};
 }
 
+function moonCountdowns(moon){
+  const syn=29.53058867;
+  const phase=moon.age;
+  const fullAt=14.77;
+  const fullDiff=phase<fullAt ? fullAt-phase : phase-fullAt;
+  const fullPast=phase>=fullAt;
+  const fullDays=Math.round(fullDiff);
+  const newDays=Math.round(syn-phase);
+  const newDaysAgo=Math.round(phase);
+  return {fullDays,fullPast,newDays,newDaysAgo};
+}
+
 function getSabbats(year){
   return [
     {name:'Imbolc',     date:new Date(year,1,1),   icon:'🕯️',desc:'Eerste licht, voorbode van lente'},
@@ -1870,6 +1882,12 @@ function renderRitueelPage(){
   const relevant = getMostRelevantSabbat();
   const micro = getCurrentMicroSeason();
   const mm = MOON_MEANING[moon.name] || {txt:'',ritual:''};
+  const mc = moonCountdowns(moon);
+  const fullLabel = mc.fullPast
+    ? (mc.fullDays===0 ? 'vandaag' : mc.fullDays===1 ? 'gisteren' : `${mc.fullDays} dagen geleden`)
+    : (mc.fullDays===0 ? 'vandaag' : mc.fullDays===1 ? 'morgen' : `over ${mc.fullDays} dagen`);
+  const newLabel = mc.newDays<=1 ? (mc.newDays===0?'vandaag':'morgen') : `over ${mc.newDays} dagen`;
+  const newAgoLabel = mc.newDaysAgo===0?'vandaag':mc.newDaysAgo===1?'gisteren':`${mc.newDaysAgo} dagen geleden`;
 
   const wheelRows = sabbats.slice(0,-1).map(s => {
     const du = daysUntil(s.date);
@@ -1913,9 +1931,13 @@ function renderRitueelPage(){
     <div class="card">
       <div class="card-head">
         <span class="card-title">${moon.icon} ${moon.name}</span>
-        <span style="font-size:11px;color:var(--muted)">Dag ${Math.floor(moon.age)+1}</span>
+        <span style="font-size:11px;color:var(--muted)">Dag ${Math.floor(moon.age)+1} van 29</span>
       </div>
-      <div style="padding:14px 18px 4px">
+      <div style="padding:10px 18px 4px;display:flex;gap:18px">
+        <span style="font-size:12px;color:var(--muted)">🌕 Volle maan: <b style="color:var(--ink2)">${fullLabel}</b></span>
+        <span style="font-size:12px;color:var(--muted)">🌑 Nieuwe maan: <b style="color:var(--ink2)">${newLabel}</b></span>
+      </div>
+      <div style="padding:8px 18px 4px">
         <div style="font-size:14px;color:var(--ink2);line-height:1.7;margin-bottom:12px">${mm.txt}</div>
       </div>
       <div class="ritual-mini" style="margin:0 14px 14px">
@@ -2908,8 +2930,8 @@ function renderPeriodic(){
     div.innerHTML=`
       <button class="per-check" onclick="event.stopPropagation();donePeriodic('${t.id}')">✓</button>
       <div class="per-text">
-        <span class="per-name">${t.name}${t.isApparaten?' <span style="font-size:10px;color:var(--muted)">→ subtaken</span>':''}</span>
-        <span class="per-meta">${freqLabel} · ${lastText}${t.duur?' · '+t.duur+' min':''}</span>
+        <span class="per-name">${t.name}</span>
+        <span class="per-meta">${freqLabel} · ${lastText}${t.duur?' · '+t.duur+' min':''}${t.isApparaten?' · subtaken':''}</span>
       </div>
       ${noteBtn}${editBtn}
       <button class="skip-btn" onclick="event.stopPropagation();skipPeriodic('${t.id}')">Later</button>`;
@@ -2955,8 +2977,8 @@ function renderPeriodicTaken(showAll){
       div.innerHTML=`
         ${due?`<button class="per-check" onclick="event.stopPropagation();donePeriodic('${t.id}')">✓</button>`:'<span style="width:28px;flex-shrink:0"></span>'}
         <div class="per-text">
-          <span class="per-name">${t.name}${t.isApparaten?' <span style="font-size:10px;color:var(--muted)">→ subtaken</span>':''}</span>
-          <span class="per-meta">${freqLabel} · ${lastText}${t.duur?' · '+t.duur+' min':''}</span>
+          <span class="per-name">${t.name}</span>
+          <span class="per-meta">${freqLabel} · ${lastText}${t.duur?' · '+t.duur+' min':''}${t.isApparaten?' · subtaken':''}</span>
         </div>
         ${noteBtn}${editBtn}
         ${due?`<button class="skip-btn" onclick="event.stopPropagation();skipPeriodic('${t.id}')">Later</button>`:''}`;

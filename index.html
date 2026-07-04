@@ -399,6 +399,7 @@ body::before {
 .time-custom::placeholder { color: var(--faint); }
 
 .vr-notdue { opacity: 0.38; }
+.vr-dim { opacity: 0.45; }
 .vr-dep { background: rgba(232,170,80,0.06); }
 
 .add-row {
@@ -939,12 +940,10 @@ body.theme-light .moverlay { background: rgba(44,31,20,0.5); }
         <span class="card-title">Terugkerend</span>
         <button class="card-btn" onclick="openM('m-rec')">+ Nieuw</button>
       </div>
-      <div class="tabs">
-        <div class="tab active" onclick="switchTab(this,'dag')">Dagelijks</div>
-        <div class="tab" onclick="switchTab(this,'week')">Wekelijks</div>
-      </div>
-      <div class="tpane active" id="tp-dag"></div>
-      <div class="tpane" id="tp-week"></div>
+      <div style="padding:6px 18px 2px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em">Dagelijks</div>
+      <div id="tp-dag"></div>
+      <div style="padding:6px 18px 2px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;border-top:1px solid var(--border)">Wekelijks</div>
+      <div id="tp-week"></div>
       <div style="border-top:1px solid var(--border);padding:6px 0 2px">
         <div style="padding:8px 18px 2px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em">Routines</div>
         <div id="dag-vr-list"></div>
@@ -1268,6 +1267,20 @@ body.theme-light .moverlay { background: rgba(44,31,20,0.5); }
         <option value="14">Tweewekelijks</option>
       </select>
     </div>
+    <div class="mfield" style="display:flex;gap:10px">
+      <div style="flex:1"><label>Energie</label>
+        <select id="nr-energy">
+          <option value="">— geen voorkeur</option>
+          <option value="groen">Groen</option>
+          <option value="geel">Geel</option>
+          <option value="oranje">Oranje</option>
+          <option value="rood">Rood</option>
+        </select>
+      </div>
+      <div style="flex:0 0 80px"><label>Duur (min)</label>
+        <input id="nr-duur" type="number" min="1" placeholder="—">
+      </div>
+    </div>
     <div class="mactions">
       <button class="mbtn-c" onclick="closeM(null,'m-new-routine')">Annuleren</button>
       <button class="mbtn-p" onclick="saveNewRoutine()">Toevoegen</button>
@@ -1288,6 +1301,20 @@ body.theme-light .moverlay { background: rgba(44,31,20,0.5); }
         <option value="7">Wekelijks</option>
         <option value="14">Tweewekelijks</option>
       </select>
+    </div>
+    <div class="mfield" style="display:flex;gap:10px">
+      <div style="flex:1"><label>Energie</label>
+        <select id="er-energy">
+          <option value="">— geen voorkeur</option>
+          <option value="groen">Groen</option>
+          <option value="geel">Geel</option>
+          <option value="oranje">Oranje</option>
+          <option value="rood">Rood</option>
+        </select>
+      </div>
+      <div style="flex:0 0 80px"><label>Duur (min)</label>
+        <input id="er-duur" type="number" min="1" placeholder="—">
+      </div>
     </div>
     <div class="mactions">
       <button class="mbtn-c" onclick="closeM(null,'m-edit-routine')">Annuleren</button>
@@ -2694,14 +2721,20 @@ function renderDagRoutines(){
   (s.vasteRoutines||[]).forEach(r=>{
     const days=r.lastDone?Math.floor((now-new Date(r.lastDone+'T12:00:00').getTime())/86400000):null;
     const due=!r.lastDone||days>=r.freq;
+    const eFit=fits(r.energy,curE);
+    const tFit=!timeBudget||!r.duur||r.duur<=timeBudget;
+    const dim=!eFit||!tFit;
     const div=document.createElement('div');
-    div.className='titem'+(due?'':' vr-notdue');
+    div.className='titem'+(due?'':' vr-notdue')+(dim?' vr-dim':'');
     div.style.pointerEvents='auto';
     div.onclick=()=>{ doneVasteRoutine(r.id); renderDagRoutines(); renderVasteRoutines(); };
     const lastText=!r.lastDone?'nog nooit':days===0?'✓ vandaag':days===1?'gisteren':`${days}d geleden`;
+    const durBadge=r.duur?`<span class="dur-badge">${r.duur} min</span>`:'';
     div.innerHTML=`
       <div class="tchk"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg></div>
       <span class="tname">${r.name}</span>
+      ${durBadge}
+      ${r.energy?`<div class="epip ${r.energy}"></div>`:''}
       <span style="font-size:11px;color:${due?'var(--ember)':'var(--muted)'};flex-shrink:0">${lastText}</span>`;
     list.appendChild(div);
   });
@@ -2738,18 +2771,24 @@ function renderVasteRoutines(){
   (s.vasteRoutines||[]).forEach(r=>{
     const days=r.lastDone?Math.floor((now-new Date(r.lastDone+'T12:00:00').getTime())/86400000):null;
     const due=!r.lastDone||days>=r.freq;
+    const eFit=fits(r.energy,curE);
+    const tFit=!timeBudget||!r.duur||r.duur<=timeBudget;
+    const dim=!eFit||!tFit;
     const div=document.createElement('div');
-    div.className='titem'+(due?'':' vr-notdue');
+    div.className='titem'+(due?'':' vr-notdue')+(dim?' vr-dim':'');
     div.style.pointerEvents='auto';
     div.onclick=()=>doneVasteRoutine(r.id);
     const lastText=!r.lastDone?'nog nooit':days===0?'vandaag':days===1?'gisteren':`${days} d geleden`;
     const freqLabel=VR_FREQ_LABELS[r.freq]||`elke ${r.freq} dagen`;
+    const durBadge=r.duur?`<span class="dur-badge">${r.duur} min</span>`:'';
     div.innerHTML=`
       <div class="tchk"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg></div>
       <div class="per-text" style="flex:1">
         <span class="per-name">${r.name}${r.triggersDep?` <span style="font-size:10px;color:var(--muted)">→ ${r.triggersDep.name}</span>`:''}</span>
         <span class="per-meta">${freqLabel} · ${lastText}</span>
       </div>
+      ${durBadge}
+      ${r.energy?`<div class="epip ${r.energy}"></div>`:''}
       <button class="editbtn" onclick="event.stopPropagation();openEditRoutine('${r.id}')">✎</button>
       <button class="delbtn" onclick="event.stopPropagation();deleteVasteRoutine('${r.id}')">×</button>`;
     list.appendChild(div);
@@ -2759,10 +2798,13 @@ function renderVasteRoutines(){
 function saveNewRoutine(){
   const name=document.getElementById('nr-name').value.trim(); if(!name) return;
   const freq=parseInt(document.getElementById('nr-freq').value);
+  const energy=document.getElementById('nr-energy').value||null;
+  const duur=parseInt(document.getElementById('nr-duur').value)||null;
   const s=getS();
-  s.vasteRoutines.push({id:'vr'+Date.now(),name,freq,lastDone:null});
+  s.vasteRoutines.push({id:'vr'+Date.now(),name,freq,energy,duur,lastDone:null});
   ss(s); closeM(null,'m-new-routine'); renderVasteRoutines();
   document.getElementById('nr-name').value='';
+  document.getElementById('nr-duur').value='';
 }
 
 function openEditRoutine(id){
@@ -2770,6 +2812,8 @@ function openEditRoutine(id){
   document.getElementById('er-id').value=id;
   document.getElementById('er-name').value=r.name;
   document.getElementById('er-freq').value=r.freq;
+  document.getElementById('er-energy').value=r.energy||'';
+  document.getElementById('er-duur').value=r.duur||'';
   openM('m-edit-routine');
 }
 
@@ -2777,8 +2821,10 @@ function saveEditRoutine(){
   const id=document.getElementById('er-id').value;
   const name=document.getElementById('er-name').value.trim(); if(!name) return;
   const freq=parseInt(document.getElementById('er-freq').value);
+  const energy=document.getElementById('er-energy').value||null;
+  const duur=parseInt(document.getElementById('er-duur').value)||null;
   const s=getS(); const r=s.vasteRoutines.find(r=>r.id===id); if(!r) return;
-  r.name=name; r.freq=freq;
+  r.name=name; r.freq=freq; r.energy=energy; r.duur=duur;
   ss(s); closeM(null,'m-edit-routine'); renderVasteRoutines();
 }
 

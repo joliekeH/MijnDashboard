@@ -2721,7 +2721,7 @@ function renderDagRoutines(){
   (s.vasteRoutines||[]).forEach(r=>{
     const days=r.lastDone?Math.floor((now-new Date(r.lastDone+'T12:00:00').getTime())/86400000):null;
     const due=!r.lastDone||days>=r.freq;
-    const eFit=fits(r.energy,curE);
+    const eFit=!r.energy||fits(r.energy,curE);
     const tFit=!timeBudget||!r.duur||r.duur<=timeBudget;
     const dim=!eFit||!tFit;
     const div=document.createElement('div');
@@ -2735,7 +2735,8 @@ function renderDagRoutines(){
       <span class="tname">${r.name}</span>
       ${durBadge}
       ${r.energy?`<div class="epip ${r.energy}"></div>`:''}
-      <span style="font-size:11px;color:${due?'var(--ember)':'var(--muted)'};flex-shrink:0">${lastText}</span>`;
+      <span style="font-size:11px;color:${due?'var(--ember)':'var(--muted)'};flex-shrink:0">${lastText}</span>
+      <button class="editbtn" onclick="event.stopPropagation();openEditRoutine('${r.id}')">✎</button>`;
     list.appendChild(div);
   });
 }
@@ -2771,7 +2772,7 @@ function renderVasteRoutines(){
   (s.vasteRoutines||[]).forEach(r=>{
     const days=r.lastDone?Math.floor((now-new Date(r.lastDone+'T12:00:00').getTime())/86400000):null;
     const due=!r.lastDone||days>=r.freq;
-    const eFit=fits(r.energy,curE);
+    const eFit=!r.energy||fits(r.energy,curE);
     const tFit=!timeBudget||!r.duur||r.duur<=timeBudget;
     const dim=!eFit||!tFit;
     const div=document.createElement('div');

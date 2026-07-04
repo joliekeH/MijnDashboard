@@ -1219,13 +1219,41 @@ body.theme-light .moverlay { background: rgba(44,31,20,0.5); }
 
 <!-- Apparaten onderhouden -->
 <div class="moverlay" id="m-apparaten" onclick="closeApparaatModal(event)">
-  <div class="modal" style="max-height:80vh;display:flex;flex-direction:column">
+  <div class="modal" style="max-height:85vh;display:flex;flex-direction:column">
     <div class="modal-handle"></div>
-    <div class="modal-title">Apparaten onderhouden</div>
-    <div style="font-size:12px;color:var(--muted);padding-bottom:10px">~60 min · Vink af wat je doet — klok wordt teruggezet</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div class="modal-title" style="margin:0">Apparaten onderhouden</div>
+      <button class="card-btn" onclick="openApNew()" style="flex-shrink:0">+ Toevoegen</button>
+    </div>
+    <div style="font-size:12px;color:var(--muted);padding-bottom:10px">Vink af wat je doet — klok wordt teruggezet per subtaak</div>
     <div id="ap-list" style="overflow-y:auto;flex:1;margin:0 -18px;padding:0 18px"></div>
     <div class="mactions" style="flex-shrink:0">
-      <button class="mbtn-p" style="width:100%" onclick="closeApparaten()">Klaar</button>
+      <button class="mbtn-p" style="width:100%" onclick="closeApparaten()">Klaar — hoofdtaak als gedaan markeren</button>
+    </div>
+  </div>
+</div>
+
+<!-- Subtaak bewerken/toevoegen -->
+<div class="moverlay" id="m-ap-edit" onclick="closeM(event,'m-ap-edit')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="ap-edit-title">Subtaak</div>
+    <input type="hidden" id="ap-edit-id">
+    <div class="mfield"><label>Naam</label><input id="ap-edit-name" placeholder="Bijv. Waterkoker ontkalken"></div>
+    <div class="mfield"><label>Hoe vaak</label>
+      <select id="ap-edit-freq">
+        <option value="30">Maandelijks (30 d)</option>
+        <option value="90">Elk kwartaal (90 d)</option>
+        <option value="180">Halfjaarlijks (180 d)</option>
+        <option value="365">Jaarlijks (365 d)</option>
+      </select>
+    </div>
+    <div class="mfield"><label>Notitie / stappen (optioneel)</label>
+      <textarea id="ap-edit-note" placeholder="Tips, stappen, bestelnummers…" style="width:100%;min-height:80px;background:var(--bg2);border:1px solid var(--border2);border-radius:12px;color:var(--ink);font-family:'Quicksand',sans-serif;font-size:13px;padding:10px 12px;outline:none;resize:vertical;line-height:1.6;margin-top:6px;box-sizing:border-box"></textarea>
+    </div>
+    <div class="mactions">
+      <button class="mbtn-c" onclick="closeM(null,'m-ap-edit')">Annuleren</button>
+      <button class="mbtn-p" onclick="saveApEdit()">Opslaan</button>
     </div>
   </div>
 </div>
@@ -2648,7 +2676,12 @@ function renderApparaatSubtasks(){
   const list=document.getElementById('ap-list');
   if(!list) return;
   list.innerHTML='';
-  (s.apparaten?.subtasks||[]).forEach(st=>{
+  const sorted=[...(s.apparaten?.subtasks||[])].sort((a,b)=>{
+    const urgA=a.lastDone?(now-new Date(a.lastDone+'T12:00:00').getTime())/(a.freq*86400000):999;
+    const urgB=b.lastDone?(now-new Date(b.lastDone+'T12:00:00').getTime())/(b.freq*86400000):999;
+    return urgB-urgA;
+  });
+  sorted.forEach(st=>{
     const days=st.lastDone?Math.floor((now-new Date(st.lastDone+'T12:00:00').getTime())/86400000):null;
     const due=!st.lastDone||(days>=st.freq);
     const ticked=_apTicked.has(st.id);
@@ -2658,15 +2691,53 @@ function renderApparaatSubtasks(){
     div.onclick=()=>toggleApparaatSubtask(st.id);
     const freqLabel=FREQ_LABELS[st.freq]||`elke ${st.freq} d`;
     const lastText=!st.lastDone?'nog nooit':days===0?'vandaag':days===1?'gisteren':`${days}d geleden`;
+    const daysLeft=due?null:Math.ceil(st.freq-days);
+    const metaExtra=daysLeft?` · over ${daysLeft}d`:(due?' · aan de beurt':'');
     div.innerHTML=`
       <div class="tchk"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg></div>
       <div class="per-text" style="flex:1">
         <span class="per-name">${st.name}</span>
-        <span class="per-meta">${freqLabel} · ${lastText}</span>
+        <span class="per-meta">${freqLabel} · ${lastText}${metaExtra}</span>
       </div>
-      ${st.note?`<button class="editbtn" onclick="event.stopPropagation();openApNote('${st.id}')" style="font-size:13px">ℹ</button>`:''}`;
+      ${st.note?`<button class="editbtn" onclick="event.stopPropagation();openApNote('${st.id}')" style="font-size:13px">ℹ</button>`:''}
+      <button class="editbtn" onclick="event.stopPropagation();openApEdit('${st.id}')">✎</button>`;
     list.appendChild(div);
   });
+}
+
+function openApNew(){
+  document.getElementById('ap-edit-id').value='';
+  document.getElementById('ap-edit-title').textContent='Subtaak toevoegen';
+  document.getElementById('ap-edit-name').value='';
+  document.getElementById('ap-edit-freq').value='90';
+  document.getElementById('ap-edit-note').value='';
+  openM('m-ap-edit');
+}
+
+function openApEdit(id){
+  const s=getS(); const st=(s.apparaten?.subtasks||[]).find(x=>x.id===id); if(!st) return;
+  document.getElementById('ap-edit-id').value=id;
+  document.getElementById('ap-edit-title').textContent='Subtaak bewerken';
+  document.getElementById('ap-edit-name').value=st.name;
+  document.getElementById('ap-edit-freq').value=st.freq;
+  document.getElementById('ap-edit-note').value=st.note||'';
+  openM('m-ap-edit');
+}
+
+function saveApEdit(){
+  const name=document.getElementById('ap-edit-name').value.trim(); if(!name) return;
+  const freq=parseInt(document.getElementById('ap-edit-freq').value);
+  const note=document.getElementById('ap-edit-note').value.trim()||null;
+  const id=document.getElementById('ap-edit-id').value;
+  const s=getS();
+  if(!s.apparaten.subtasks) s.apparaten.subtasks=[];
+  if(id){
+    const st=s.apparaten.subtasks.find(x=>x.id===id); if(!st) return;
+    st.name=name; st.freq=freq; st.note=note;
+  } else {
+    s.apparaten.subtasks.push({id:'ap'+Date.now(),name,freq,lastDone:null,note});
+  }
+  ss(s); closeM(null,'m-ap-edit'); renderApparaatSubtasks();
 }
 
 function toggleApparaatSubtask(id){
@@ -2721,14 +2792,15 @@ function renderDagRoutines(){
   (s.vasteRoutines||[]).forEach(r=>{
     const days=r.lastDone?Math.floor((now-new Date(r.lastDone+'T12:00:00').getTime())/86400000):null;
     const due=!r.lastDone||days>=r.freq;
+    const doneToday=r.lastDone===today();
     const eFit=!r.energy||fits(r.energy,curE);
     const tFit=!timeBudget||!r.duur||r.duur<=timeBudget;
     const dim=!eFit||!tFit;
     const div=document.createElement('div');
-    div.className='titem'+(due?'':' vr-notdue')+(dim?' vr-dim':'');
+    div.className='titem'+(doneToday?' done':(due?'':' vr-notdue'))+(dim?' vr-dim':'');
     div.style.pointerEvents='auto';
     div.onclick=()=>{ doneVasteRoutine(r.id); renderDagRoutines(); renderVasteRoutines(); };
-    const lastText=!r.lastDone?'nog nooit':days===0?'✓ vandaag':days===1?'gisteren':`${days}d geleden`;
+    const lastText=!r.lastDone?'nog nooit':days===0?'vandaag':days===1?'gisteren':`${days}d geleden`;
     const durBadge=r.duur?`<span class="dur-badge">${r.duur} min</span>`:'';
     div.innerHTML=`
       <div class="tchk"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg></div>
@@ -2772,11 +2844,12 @@ function renderVasteRoutines(){
   (s.vasteRoutines||[]).forEach(r=>{
     const days=r.lastDone?Math.floor((now-new Date(r.lastDone+'T12:00:00').getTime())/86400000):null;
     const due=!r.lastDone||days>=r.freq;
+    const doneToday=r.lastDone===today();
     const eFit=!r.energy||fits(r.energy,curE);
     const tFit=!timeBudget||!r.duur||r.duur<=timeBudget;
     const dim=!eFit||!tFit;
     const div=document.createElement('div');
-    div.className='titem'+(due?'':' vr-notdue')+(dim?' vr-dim':'');
+    div.className='titem'+(doneToday?' done':(due?'':' vr-notdue'))+(dim?' vr-dim':'');
     div.style.pointerEvents='auto';
     div.onclick=()=>doneVasteRoutine(r.id);
     const lastText=!r.lastDone?'nog nooit':days===0?'vandaag':days===1?'gisteren':`${days} d geleden`;
@@ -2945,15 +3018,14 @@ function isDue(t){
   return (now-new Date(t.lastDone+'T12:00:00').getTime())/86400000>=t.freq;
 }
 
-function renderPeriodic(){
+function renderPeriodic(showMore){
   const s=getS(); const tasks=s.periodicTasks||[];
-  // Voeg apparaten virtual task toe
   const ap=s.apparaten||{lastDone:null,skippedUntil:null};
   const apTask={id:'__ap__',name:'Apparaten onderhouden',freq:30,duur:60,
     lastDone:ap.lastDone,skippedUntil:ap.skippedUntil,isApparaten:true};
   const allTasks=[...tasks,apTask];
-  const due=allTasks.filter(isDue);
-  const visible=[...due].sort((a,b)=>periodicUrgency(b)-periodicUrgency(a)).slice(0,5);
+  const due=allTasks.filter(isDue).sort((a,b)=>periodicUrgency(b)-periodicUrgency(a));
+  const visible=showMore?due:due.slice(0,5);
   const countEl=document.getElementById('periodic-count');
   if(countEl) countEl.textContent=due.length>5?`${due.length} klaar`:due.length||'✓';
   const list=document.getElementById('periodic-list');
@@ -2963,33 +3035,36 @@ function renderPeriodic(){
     list.innerHTML='<div class="empty">Alles bijgewerkt ✦</div>';
     return;
   }
-  const timeVisible = timeBudget ? visible.filter(t => !t.duur || t.duur <= timeBudget) : visible;
+  const timeVisible=timeBudget?visible.filter(t=>!t.duur||t.duur<=timeBudget):visible;
   timeVisible.forEach(t=>{
     const overdue=periodicUrgency(t)>2;
     const div=document.createElement('div');
     div.className='per-item'+(overdue?' per-overdue':'');
+    if(t.isApparaten) div.onclick=()=>openApparaten();
     const days=t.lastDone?Math.floor((Date.now()-new Date(t.lastDone+'T12:00:00').getTime())/86400000):null;
     const lastText=!t.lastDone?'nog nooit':days===0?'vandaag':days===1?'gisteren':`${days} dagen geleden`;
     const freqLabel=FREQ_LABELS[t.freq]||`elke ${t.freq} dagen`;
-    const pDurBadge=t.duur?`<span class="dur-badge">${t.duur} min</span>`:'';
     const noteBtn=t.note?`<button class="editbtn" onclick="event.stopPropagation();openTaskNote('${t.id}')" style="flex-shrink:0;font-size:13px">ℹ</button>`:'';
     const editBtn=t.isApparaten?'':`<button class="editbtn" onclick="event.stopPropagation();openEditPeriodic('${t.id}')" style="flex-shrink:0">✎</button>`;
+    const openBtn=t.isApparaten
+      ?`<button class="per-check" style="font-size:15px;padding:0 4px" onclick="event.stopPropagation();openApparaten()">→</button>`
+      :`<button class="per-check" onclick="event.stopPropagation();donePeriodic('${t.id}')">✓</button>`;
     div.innerHTML=`
-      <button class="per-check" onclick="event.stopPropagation();donePeriodic('${t.id}')">✓</button>
+      ${openBtn}
       <div class="per-text">
         <span class="per-name">${t.name}</span>
-        <span class="per-meta">${freqLabel} · ${lastText}${t.duur?' · '+t.duur+' min':''}${t.isApparaten?' · subtaken':''}</span>
+        <span class="per-meta">${freqLabel} · ${lastText}${t.duur?' · '+t.duur+' min':''}</span>
       </div>
       ${noteBtn}${editBtn}
       <button class="skip-btn" onclick="event.stopPropagation();skipPeriodic('${t.id}')">Later</button>`;
     list.appendChild(div);
   });
-  if(due.length>5){
+  if(!showMore && due.length>5){
     const f=document.createElement('button');
     f.className='card-btn';
     f.style.cssText='display:block;margin:4px auto 12px;font-size:11px';
-    f.textContent=`+ ${due.length-5} meer — bekijk alles`;
-    f.onclick=()=>{ const nb=document.querySelector('.nbtn[onclick*="master"]'); navTo('master',nb); };
+    f.textContent=`+ ${due.length-5} meer tonen`;
+    f.onclick=()=>renderPeriodic(true);
     list.appendChild(f);
   }
 }
@@ -3021,14 +3096,18 @@ function renderPeriodicTaken(showAll){
       const freqLabel=FREQ_LABELS[t.freq]||`elke ${t.freq} dagen`;
       const noteBtn=t.note?`<button class="editbtn" onclick="event.stopPropagation();openTaskNote('${t.id}')" style="flex-shrink:0;font-size:13px">ℹ</button>`:'';
       const editBtn=t.isApparaten?'':`<button class="editbtn" onclick="event.stopPropagation();openEditPeriodic('${t.id}')" style="flex-shrink:0">✎</button>`;
+      if(t.isApparaten) div.onclick=()=>openApparaten();
+      const openBtn=t.isApparaten
+        ?`<button class="per-check" style="font-size:15px;padding:0 4px" onclick="event.stopPropagation();openApparaten()">→</button>`
+        :(due?`<button class="per-check" onclick="event.stopPropagation();donePeriodic('${t.id}')">✓</button>`:'<span style="width:28px;flex-shrink:0"></span>');
       div.innerHTML=`
-        ${due?`<button class="per-check" onclick="event.stopPropagation();donePeriodic('${t.id}')">✓</button>`:'<span style="width:28px;flex-shrink:0"></span>'}
+        ${openBtn}
         <div class="per-text">
           <span class="per-name">${t.name}</span>
-          <span class="per-meta">${freqLabel} · ${lastText}${t.duur?' · '+t.duur+' min':''}${t.isApparaten?' · subtaken':''}</span>
+          <span class="per-meta">${freqLabel} · ${lastText}${t.duur?' · '+t.duur+' min':''}</span>
         </div>
         ${noteBtn}${editBtn}
-        ${due?`<button class="skip-btn" onclick="event.stopPropagation();skipPeriodic('${t.id}')">Later</button>`:''}`;
+        ${due&&!t.isApparaten?`<button class="skip-btn" onclick="event.stopPropagation();skipPeriodic('${t.id}')">Later</button>`:''}`;
       list.appendChild(div);
     });
   }

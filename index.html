@@ -845,6 +845,12 @@ body::before {
 
   <div class="scroll z1">
 
+    <!-- Rood energie bericht -->
+    <div id="red-energy-card" style="display:none;margin:14px 16px 0;padding:16px 18px;background:rgba(196,80,80,0.08);border:1px solid rgba(196,80,80,0.2);border-radius:var(--radius);position:relative;z-index:1">
+      <div id="red-energy-p1" style="font-size:14px;color:var(--ink);line-height:1.65;margin-bottom:10px;font-family:'Libre Baskerville',serif;font-style:italic"></div>
+      <div id="red-energy-p2" style="font-size:13px;color:var(--ink2);line-height:1.6"></div>
+    </div>
+
     <!-- Ochtendoverzicht -->
     <div class="card">
       <div id="morning-overview"></div>
@@ -876,10 +882,10 @@ body::before {
       </div>
     </div>
 
-    <!-- Taken vandaag -->
+    <!-- To-do's vandaag -->
     <div class="card">
       <div class="card-head">
-        <span class="card-title">Taken</span>
+        <span class="card-title">To-do's</span>
         <div style="display:flex;align-items:center;gap:10px">
           <span class="card-count" id="task-count">—</span>
           <button class="card-btn" id="done-toggle-btn" onclick="toggleDoneVisible()">Verberg ✓</button>
@@ -899,7 +905,7 @@ body::before {
       </div>
     </div>
 
-    <!-- Terugkerend -->
+    <!-- Terugkerend + Routines -->
     <div class="card">
       <div class="card-head">
         <span class="card-title">Terugkerend</span>
@@ -908,23 +914,19 @@ body::before {
       <div class="tabs">
         <div class="tab active" onclick="switchTab(this,'dag')">Dagelijks</div>
         <div class="tab" onclick="switchTab(this,'week')">Wekelijks</div>
-        <div class="tab" onclick="switchTab(this,'maand')">Maandelijks</div>
       </div>
       <div class="tpane active" id="tp-dag"></div>
       <div class="tpane" id="tp-week"></div>
-      <div class="tpane" id="tp-maand"></div>
+      <div style="border-top:1px solid var(--border);padding:6px 0 2px">
+        <div style="padding:8px 18px 2px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em">Routines</div>
+        <div id="dag-vr-list"></div>
+      </div>
     </div>
 
-    <!-- Compact routines -->
-    <div class="card">
-      <div class="card-head"><span class="card-title">Routines</span></div>
-      <div id="dag-vr-list"></div>
-    </div>
-
-    <!-- Periodiek -->
+    <!-- Huishouden -->
     <div class="card">
       <div class="card-head">
-        <span class="card-title">Periodiek</span>
+        <span class="card-title">Huishouden</span>
         <div style="display:flex;align-items:center;gap:10px">
           <span class="card-count" id="periodic-count">—</span>
           <button class="card-btn" onclick="openM('m-new-periodic')">+ Toevoegen</button>
@@ -1469,6 +1471,17 @@ function getS(){
     localStorage.setItem('mijndag_v3',JSON.stringify(s));
     localStorage.setItem('mijndag_ts',Date.now());
   }
+  // Migratie v4: fuck-it basket wekelijks, Rondje opruimen toevoegen
+  if(s.migV<4){
+    const fib=s.vasteRoutines&&s.vasteRoutines.find(r=>r.id==='vr4');
+    if(fib) fib.freq=7;
+    if(s.vasteRoutines&&!s.vasteRoutines.find(r=>r.id==='vr6')){
+      s.vasteRoutines.push({id:'vr6',name:'Rondje opruimen',freq:5,lastDone:null});
+    }
+    s.migV=4;
+    localStorage.setItem('mijndag_v3',JSON.stringify(s));
+    localStorage.setItem('mijndag_ts',Date.now());
+  }
   return s;
 }
 
@@ -1579,6 +1592,49 @@ const EHINTS={
   rood:  '🔴 Rustdag — alleen kerntaken en zelfzorg'
 };
 
+const RED_MSGS=[
+  {p1:'De stem die zegt dat rusten verdiend moet worden, heeft het mis.',
+   p2:'Pak een deken en laat je lichaam even zwaar zijn.'},
+  {p1:'Voor jezelf kiezen vandaag is geen egoïsme — het is noodzaak.',
+   p2:'Drink eerst een glas water voordat je iets anders doet.'},
+  {p1:'Als jij stopt, stort niet alles in. Dat voelt zo, maar het is niet zo.',
+   p2:'Trek iets zachts aan en geef je lichaam even rust.'},
+  {p1:'Je draagt al genoeg. Meer erbij duwen helpt niet, het put uit.',
+   p2:'Eet iets kleins — ook al is het maar een cracker of een stuk fruit.'},
+  {p1:'Rusten is niet lui. Dat gevoel is een oude stem, geen feit.',
+   p2:'Een warm bad of douche is nu genoeg als actie.'},
+  {p1:'De kleinste versie telt ook. Doe alleen wat echt niet wacht.',
+   p2:'Pak iets zachts vast — een kussen, een knuffel, een warme mok.'},
+  {p1:'Je bent niet lui. Je lichaam geeft een signaal dat serieus genomen mag worden.',
+   p2:'Vraag jezelf: wat maakt het nu 1% draaglijker?'},
+  {p1:'Anderen helpen begint bij jezelf niet kapotmaken. Vandaag is jouw beurt.',
+   p2:'Als je ergens pijn hebt, neem dan een pijnstiller — dat is geen zwakte.'},
+  {p1:'Loslaten vandaag betekent niet dat alles misgaat. De wereld draait ook door als jij rust.',
+   p2:'Ga liggen met een deken. Meer hoeft er niet te gebeuren.'},
+  {p1:'Je hebt al zoveel gedaan. De stem die dat ontkent vergist zich.',
+   p2:'Een korte douche kan genoeg zijn om je iets minder zwaar te voelen.'},
+  {p1:'Rusten hoeft niets op te leveren. Het is geen beloning, het is wat je nu nodig hebt.',
+   p2:'Trek je zachtste kleren aan — dat is al een goede zet.'},
+  {p1:'Eén kleine stap is ook een stap. Je hoeft dit niet perfect te doen.',
+   p2:'Begin met een glas water. Dat telt.'},
+  {p1:'Presteren is vandaag niet de maatstaf. Je lijf heeft meer gezag dan die stem.',
+   p2:'Eet iets, ook al is het klein — je bloedsuiker heeft dat nodig.'},
+  {p1:'Je waarde hangt niet af van wat je vandaag voor anderen doet.',
+   p2:'Pak iets vertrouwds vast — een warme mok, een kussen, wat dan ook.'},
+  {p1:'De stem die zegt dat ontspanning gevaarlijk is, vergist zich. Dit is herstel.',
+   p2:'Vraag jezelf zacht: wat maakt het nu 1% draaglijker?'},
+];
+
+function showRedMsg(){
+  const card=document.getElementById('red-energy-card'); if(!card) return;
+  const now=new Date();
+  const doy=Math.floor((now-(new Date(now.getFullYear(),0,0)))/86400000);
+  const msg=RED_MSGS[doy%RED_MSGS.length];
+  document.getElementById('red-energy-p1').textContent=msg.p1;
+  document.getElementById('red-energy-p2').textContent=msg.p2;
+  card.style.display='block';
+}
+
 function setEnergy(lvl){
   curE=lvl;
   const s=getS(); s.energy[today()]=lvl; ss(s);
@@ -1586,6 +1642,9 @@ function setEnergy(lvl){
   document.querySelector(`.ebtn[data-e="${lvl}"]`).classList.add('active');
   const h=document.getElementById('ehint');
   h.textContent=EHINTS[lvl]; h.className=`ehint visible ${lvl}`;
+  const card=document.getElementById('red-energy-card');
+  if(card) card.style.display=lvl==='rood'?'block':'none';
+  if(lvl==='rood') showRedMsg();
   renderTasks(); renderRec();
 }
 
@@ -1615,7 +1674,7 @@ function getSabbats(year){
     {name:'Ostara',     date:new Date(year,2,20),  icon:'🌸',desc:'Lente-equinox, dag en nacht in balans'},
     {name:'Beltane',    date:new Date(year,4,1),   icon:'🔥',desc:'Vuur en leven, begin van de zomer'},
     {name:'Litha',      date:new Date(year,5,21),  icon:'☀️',desc:'Zomerzonnewende, langste dag'},
-    {name:'Lughnasadh', date:new Date(year,7,1),   icon:'🌾',desc:'Eerste oogst, vruchten van je werk'},
+    {name:'Lammas',     date:new Date(year,7,1),   icon:'🌾',desc:'Eerste oogst, vruchten van je werk'},
     {name:'Mabon',      date:new Date(year,8,22),  icon:'🍂',desc:'Herfst-equinox, dankbaarheid'},
     {name:'Samhain',    date:new Date(year,9,31),  icon:'🎃',desc:'Sluier wordt dun, eer je voorouders'},
     {name:'Yule',       date:new Date(year,11,21), icon:'❄️',desc:'Wintersonnewende, het licht keert terug'},
@@ -2760,7 +2819,7 @@ function defaultVasteRoutines(){
     {id:'vr1',name:'Prullenbak / containers checken', freq:7,  lastDone:null},
     {id:'vr2',name:'Planten water geven',             freq:7,  lastDone:null},
     {id:'vr3',name:'Was doen',                        freq:4,  lastDone:null, triggersDep:{name:'Was vouwen',duur:20,delay:3}},
-    {id:'vr4',name:'Fuck-it basket leegmaken',        freq:14, lastDone:null},
+    {id:'vr4',name:'Fuck-it basket leegmaken',        freq:7,  lastDone:null},
     {id:'vr5',name:'Oud papier wegbrengen',           freq:14, lastDone:null},
   ];
 }
@@ -3337,6 +3396,7 @@ function init(){
     document.querySelector(`.ebtn[data-e="${savedE}"]`).classList.add('active');
     const h=document.getElementById('ehint');
     h.textContent=EHINTS[savedE]; h.className=`ehint visible ${savedE}`;
+    if(savedE==='rood') showRedMsg();
   }
   renderMorningOverview();
   fetchWeather();

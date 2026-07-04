@@ -957,7 +957,7 @@ body.theme-light .moverlay { background: rgba(44,31,20,0.5); }
       <div class="card-head">
         <span class="card-title">Huishouden</span>
         <div style="display:flex;align-items:center;gap:10px">
-          <span class="card-count" id="periodic-count">—</span>
+          <span class="card-count" id="periodic-count" onclick="navTo('master',document.querySelector('.nbtn[onclick*=\'master\']'))" style="cursor:pointer" title="Ga naar Taken">—</span>
           <button class="card-btn" onclick="openM('m-new-periodic')">+ Toevoegen</button>
         </div>
       </div>
@@ -1616,7 +1616,7 @@ function initHeader(){
     const sabbat=getNextSabbatStrip();
     const sep='<span style="color:var(--faint)">·</span>';
     let html=`<span>${micro.icon} ${micro.name}</span>${sep}<span>${moon.icon} ${moon.name}</span>`;
-    if(sabbat) html+=`${sep}<span>${sabbat.name} · ${sabbat.days}d</span>`;
+    if(sabbat) html+=`${sep}<span>${sabbat.icon} ${sabbat.name} · ${sabbat.days}d</span>`;
     strip.innerHTML=html;
   }
 }
@@ -2926,38 +2926,59 @@ function renderPeriodic(){
   }
 }
 
-function renderPeriodicTaken(){
+function renderPeriodicTaken(showAll){
   const s=getS(); const tasks=s.periodicTasks||[];
   const ap=s.apparaten||{lastDone:null,skippedUntil:null};
   const apTask={id:'__ap__',name:'Apparaten onderhouden',freq:30,duur:60,
     lastDone:ap.lastDone,skippedUntil:ap.skippedUntil,isApparaten:true};
   const allTasks=[...tasks,apTask].sort((a,b)=>periodicUrgency(b)-periodicUrgency(a));
-  const dueCount=allTasks.filter(isDue).length;
+  const dueTasks=allTasks.filter(isDue);
+  const notDue=allTasks.filter(t=>!isDue(t));
   const countEl=document.getElementById('periodic-taken-count');
-  if(countEl) countEl.textContent=dueCount?`${dueCount} klaar`:'✓';
+  if(countEl) countEl.textContent=dueTasks.length?`${dueTasks.length} klaar`:'✓';
   const list=document.getElementById('periodic-taken-list');
   if(!list) return;
   list.innerHTML='';
-  allTasks.forEach(t=>{
-    const due=isDue(t);
-    const overdue=periodicUrgency(t)>2;
-    const div=document.createElement('div');
-    div.className='per-item'+(overdue?' per-overdue':'')+(due?'':' vr-notdue');
-    const days=t.lastDone?Math.floor((Date.now()-new Date(t.lastDone+'T12:00:00').getTime())/86400000):null;
-    const lastText=!t.lastDone?'nog nooit':days===0?'✓ vandaag':days===1?'gisteren':`${days} d geleden`;
-    const freqLabel=FREQ_LABELS[t.freq]||`elke ${t.freq} dagen`;
-    const noteBtn=t.note?`<button class="editbtn" onclick="event.stopPropagation();openTaskNote('${t.id}')" style="flex-shrink:0;font-size:13px">ℹ</button>`:'';
-    const editBtn=t.isApparaten?'':`<button class="editbtn" onclick="event.stopPropagation();openEditPeriodic('${t.id}')" style="flex-shrink:0">✎</button>`;
-    div.innerHTML=`
-      <div class="per-text">
-        <span class="per-name">${t.name}${t.isApparaten?' <span style="font-size:10px;color:var(--muted)">→ subtaken</span>':''}</span>
-        <span class="per-meta">${freqLabel} · ${lastText}${t.duur?' · '+t.duur+' min':''}</span>
-      </div>
-      ${due?`<button class="skip-btn" onclick="event.stopPropagation();skipPeriodic('${t.id}')">Later</button>`:''}
-      ${noteBtn}${editBtn}
-      ${due?`<button class="per-check" onclick="event.stopPropagation();donePeriodic('${t.id}')">✓</button>`:''}`;
-    list.appendChild(div);
-  });
+  const toShow=showAll?allTasks:dueTasks;
+  if(!toShow.length){
+    list.innerHTML='<div class="empty">Alles bijgewerkt ✦</div>';
+  } else {
+    toShow.forEach(t=>{
+      const due=isDue(t);
+      const overdue=periodicUrgency(t)>2;
+      const div=document.createElement('div');
+      div.className='per-item'+(overdue?' per-overdue':'')+(due?'':' vr-notdue');
+      const days=t.lastDone?Math.floor((Date.now()-new Date(t.lastDone+'T12:00:00').getTime())/86400000):null;
+      const lastText=!t.lastDone?'nog nooit':days===0?'✓ vandaag':days===1?'gisteren':`${days} d geleden`;
+      const freqLabel=FREQ_LABELS[t.freq]||`elke ${t.freq} dagen`;
+      const noteBtn=t.note?`<button class="editbtn" onclick="event.stopPropagation();openTaskNote('${t.id}')" style="flex-shrink:0;font-size:13px">ℹ</button>`:'';
+      const editBtn=t.isApparaten?'':`<button class="editbtn" onclick="event.stopPropagation();openEditPeriodic('${t.id}')" style="flex-shrink:0">✎</button>`;
+      div.innerHTML=`
+        <div class="per-text">
+          <span class="per-name">${t.name}${t.isApparaten?' <span style="font-size:10px;color:var(--muted)">→ subtaken</span>':''}</span>
+          <span class="per-meta">${freqLabel} · ${lastText}${t.duur?' · '+t.duur+' min':''}</span>
+        </div>
+        ${due?`<button class="skip-btn" onclick="event.stopPropagation();skipPeriodic('${t.id}')">Later</button>`:''}
+        ${noteBtn}${editBtn}
+        ${due?`<button class="per-check" onclick="event.stopPropagation();donePeriodic('${t.id}')">✓</button>`:''}`;
+      list.appendChild(div);
+    });
+  }
+  if(!showAll && notDue.length>0){
+    const f=document.createElement('button');
+    f.className='card-btn';
+    f.style.cssText='display:block;margin:4px auto 12px;font-size:11px';
+    f.textContent=`+ ${notDue.length} niet urgent — bekijk alles`;
+    f.onclick=()=>renderPeriodicTaken(true);
+    list.appendChild(f);
+  } else if(showAll && notDue.length>0){
+    const f=document.createElement('button');
+    f.className='card-btn';
+    f.style.cssText='display:block;margin:4px auto 12px;font-size:11px';
+    f.textContent='Minder tonen';
+    f.onclick=()=>renderPeriodicTaken(false);
+    list.appendChild(f);
+  }
 }
 
 function donePeriodic(id){
@@ -3446,22 +3467,27 @@ function initTheme(){
 // ════════════════════════════════════════════════════════
 function initCollapsibleCards(){
   const collapsed=JSON.parse(localStorage.getItem('mijndag_collapsed')||'{}');
-  document.querySelectorAll('#page-dag .card').forEach((card,i)=>{
-    const head=card.querySelector('.card-head');
-    if(!head||!card.querySelector('.card-title')) return;
-    const id='dagcard-'+i;
-    card.dataset.cardId=id;
-    card.classList.add('collapsible');
-    const chev=document.createElement('span');
-    chev.className='card-chevron'; chev.textContent='▾';
-    head.appendChild(chev);
-    if(collapsed[id]) card.classList.add('collapsed');
-    head.addEventListener('click',e=>{
-      if(e.target.closest('button,a,input,select')) return;
-      card.classList.toggle('collapsed');
-      const c=JSON.parse(localStorage.getItem('mijndag_collapsed')||'{}');
-      c[id]=card.classList.contains('collapsed');
-      localStorage.setItem('mijndag_collapsed',JSON.stringify(c));
+  ['#page-dag','#page-master'].forEach(pageId=>{
+    document.querySelectorAll(pageId+' .card').forEach((card,i)=>{
+      const titleEl=card.querySelector('.card-title');
+      if(!titleEl) return;
+      const id=pageId.replace('#page-','')+'-card-'+i;
+      card.dataset.cardId=id;
+      card.classList.add('collapsible');
+      const chev=document.createElement('span');
+      chev.className='card-chevron'; chev.textContent='▾';
+      titleEl.after(chev);
+      if(collapsed[id]) card.classList.add('collapsed');
+      const toggle=()=>{
+        card.classList.toggle('collapsed');
+        const c=JSON.parse(localStorage.getItem('mijndag_collapsed')||'{}');
+        c[id]=card.classList.contains('collapsed');
+        localStorage.setItem('mijndag_collapsed',JSON.stringify(c));
+      };
+      titleEl.style.cursor='pointer';
+      titleEl.addEventListener('click',toggle);
+      chev.style.cursor='pointer';
+      chev.addEventListener('click',toggle);
     });
   });
 }

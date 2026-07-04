@@ -917,7 +917,6 @@ body.theme-light .moverlay { background: rgba(44,31,20,0.5); }
         <span class="card-title">To-do's</span>
         <div style="display:flex;align-items:center;gap:10px">
           <span class="card-count" id="task-count">—</span>
-          <button class="card-btn" id="done-toggle-btn" onclick="toggleDoneVisible()">Verberg ✓</button>
         </div>
       </div>
       <div id="task-list"></div>
@@ -2907,13 +2906,13 @@ function renderPeriodic(){
     const noteBtn=t.note?`<button class="editbtn" onclick="event.stopPropagation();openTaskNote('${t.id}')" style="flex-shrink:0;font-size:13px">ℹ</button>`:'';
     const editBtn=t.isApparaten?'':`<button class="editbtn" onclick="event.stopPropagation();openEditPeriodic('${t.id}')" style="flex-shrink:0">✎</button>`;
     div.innerHTML=`
+      <button class="per-check" onclick="event.stopPropagation();donePeriodic('${t.id}')">✓</button>
       <div class="per-text">
         <span class="per-name">${t.name}${t.isApparaten?' <span style="font-size:10px;color:var(--muted)">→ subtaken</span>':''}</span>
         <span class="per-meta">${freqLabel} · ${lastText}${t.duur?' · '+t.duur+' min':''}</span>
       </div>
-      <button class="skip-btn" onclick="event.stopPropagation();skipPeriodic('${t.id}')">Later</button>
       ${noteBtn}${editBtn}
-      <button class="per-check" onclick="event.stopPropagation();donePeriodic('${t.id}')">✓</button>`;
+      <button class="skip-btn" onclick="event.stopPropagation();skipPeriodic('${t.id}')">Later</button>`;
     list.appendChild(div);
   });
   if(due.length>5){
@@ -2954,13 +2953,13 @@ function renderPeriodicTaken(showAll){
       const noteBtn=t.note?`<button class="editbtn" onclick="event.stopPropagation();openTaskNote('${t.id}')" style="flex-shrink:0;font-size:13px">ℹ</button>`:'';
       const editBtn=t.isApparaten?'':`<button class="editbtn" onclick="event.stopPropagation();openEditPeriodic('${t.id}')" style="flex-shrink:0">✎</button>`;
       div.innerHTML=`
+        ${due?`<button class="per-check" onclick="event.stopPropagation();donePeriodic('${t.id}')">✓</button>`:'<span style="width:28px;flex-shrink:0"></span>'}
         <div class="per-text">
           <span class="per-name">${t.name}${t.isApparaten?' <span style="font-size:10px;color:var(--muted)">→ subtaken</span>':''}</span>
           <span class="per-meta">${freqLabel} · ${lastText}${t.duur?' · '+t.duur+' min':''}</span>
         </div>
-        ${due?`<button class="skip-btn" onclick="event.stopPropagation();skipPeriodic('${t.id}')">Later</button>`:''}
         ${noteBtn}${editBtn}
-        ${due?`<button class="per-check" onclick="event.stopPropagation();donePeriodic('${t.id}')">✓</button>`:''}`;
+        ${due?`<button class="skip-btn" onclick="event.stopPropagation();skipPeriodic('${t.id}')">Later</button>`:''}`;
       list.appendChild(div);
     });
   }

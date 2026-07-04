@@ -805,6 +805,35 @@ body::before {
   padding: 10px 18px; font-size: 12px; color: var(--muted);
   border-top: 1px solid var(--border); font-style: italic;
 }
+
+/* ── Inklapbare kaarten ── */
+.card.collapsible .card-head { cursor: pointer; user-select: none; }
+.card-chevron {
+  margin-left: auto; font-size: 13px; color: var(--muted);
+  transition: transform 0.2s; flex-shrink: 0;
+}
+.card.collapsible.collapsed .card-chevron { transform: rotate(-90deg); }
+.card.collapsible.collapsed > *:not(.card-head) { display: none !important; }
+
+/* ── Light mode ── */
+body.theme-light {
+  --bg:      #F4EDE4;
+  --bg2:     #EBE0D4;
+  --card:    #FDF8F3;
+  --card2:   #F5EDE2;
+  --border:  #D8C8B8;
+  --border2: #C8B4A0;
+  --ink:     #2C1F14;
+  --ink2:    #4A3828;
+  --muted:   #7A6050;
+  --faint:   #A89080;
+}
+body.theme-light::after { opacity: 0.2; }
+body.theme-light::before { background: radial-gradient(circle, rgba(232,117,58,0.08) 0%, transparent 70%); }
+body.theme-light .header { background: linear-gradient(180deg, #F4EDE4 0%, rgba(244,237,228,0.95) 100%); }
+body.theme-light .bnav { background: rgba(244,237,228,0.95); }
+body.theme-light .modal { background: #FDF8F3; }
+body.theme-light .moverlay { background: rgba(44,31,20,0.5); }
 </style>
 </head>
 <body>
@@ -955,10 +984,10 @@ body::before {
 
   <div class="scroll z1">
 
-    <!-- Periodieke taken -->
+    <!-- Huishouden (periodieke taken) -->
     <div class="card">
       <div class="card-head">
-        <span class="card-title">Periodieke taken</span>
+        <span class="card-title">Huishouden</span>
         <div style="display:flex;gap:8px;align-items:center">
           <span class="card-count" id="periodic-taken-count">—</span>
           <button class="card-btn" onclick="openM('m-new-periodic')">+ Toevoegen</button>
@@ -1085,6 +1114,17 @@ body::before {
           <div style="font-size:11px;color:var(--faint);margin-top:4px">Sla deze link op als bladwijzer — opent het dashboard met je Client ID al ingevuld.</div>
         </div>
         <div style="font-size:11px;color:var(--faint);margin-top:6px;">Data wordt opgeslagen in de verborgen appmap van je Google Drive. Alleen dit dashboard heeft er toegang toe.</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px;">
+      <div class="card-head"><span class="card-title">Weergave</span></div>
+      <div class="sfield">
+        <label>Kleurenthema</label>
+        <div style="display:flex;gap:10px;margin-top:8px">
+          <button class="sbtn" id="theme-dark-btn" onclick="setTheme('dark')" style="flex:1">🌙 Donker</button>
+          <button class="sbtn" id="theme-light-btn" onclick="setTheme('light')" style="flex:1">☀️ Licht</button>
+        </div>
       </div>
     </div>
 
@@ -2076,8 +2116,9 @@ function switchTab(el,tab){
 
 function renderRec(){
   const s=getS(); const td=today(); const done=s.doneRec[td]||[];
-  ['dag','week','maand'].forEach(freq=>{
+  ['dag','week'].forEach(freq=>{
     const c=document.getElementById('tp-'+freq);
+    if(!c) return;
     const items=s.recurring.filter(r=>r.freq===freq);
     c.innerHTML='';
     if(!items.length){ c.innerHTML='<div class="empty">Geen taken</div>'; return; }
@@ -2876,9 +2917,11 @@ function renderPeriodic(){
     list.appendChild(div);
   });
   if(due.length>5){
-    const f=document.createElement('div');
-    f.style.cssText='padding:8px 18px 10px;font-size:11px;color:var(--muted);text-align:center';
-    f.textContent=`+ ${due.length-5} meer staan klaar`;
+    const f=document.createElement('button');
+    f.className='card-btn';
+    f.style.cssText='display:block;margin:4px auto 12px;font-size:11px';
+    f.textContent=`+ ${due.length-5} meer — bekijk alles`;
+    f.onclick=()=>{ const nb=document.querySelector('.nbtn[onclick*="master"]'); navTo('master',nb); };
     list.appendChild(f);
   }
 }
@@ -3075,7 +3118,7 @@ function toggleDoneVisible(){
   showDone = !showDone;
   const btn = document.getElementById('done-toggle-btn');
   if(btn) btn.textContent = showDone ? 'Verberg ✓' : 'Toon ✓';
-  ['task-list','tp-dag','tp-week','tp-maand'].forEach(id=>{
+  ['task-list','tp-dag','tp-week'].forEach(id=>{
     document.getElementById(id)?.classList.toggle('hide-done', !showDone);
   });
 }
@@ -3385,9 +3428,49 @@ function readStartLinkCID(){
 }
 
 // ════════════════════════════════════════════════════════
+// THEMA
+// ════════════════════════════════════════════════════════
+function setTheme(t){
+  localStorage.setItem('mijndag_theme',t);
+  document.body.classList.toggle('theme-light',t==='light');
+  document.getElementById('theme-dark-btn')?.style.setProperty('opacity',t==='dark'?'1':'0.5');
+  document.getElementById('theme-light-btn')?.style.setProperty('opacity',t==='light'?'1':'0.5');
+}
+function initTheme(){
+  const t=localStorage.getItem('mijndag_theme')||'dark';
+  setTheme(t);
+}
+
+// ════════════════════════════════════════════════════════
+// INKLAPBARE KAARTEN
+// ════════════════════════════════════════════════════════
+function initCollapsibleCards(){
+  const collapsed=JSON.parse(localStorage.getItem('mijndag_collapsed')||'{}');
+  document.querySelectorAll('#page-dag .card').forEach((card,i)=>{
+    const head=card.querySelector('.card-head');
+    if(!head||!card.querySelector('.card-title')) return;
+    const id='dagcard-'+i;
+    card.dataset.cardId=id;
+    card.classList.add('collapsible');
+    const chev=document.createElement('span');
+    chev.className='card-chevron'; chev.textContent='▾';
+    head.appendChild(chev);
+    if(collapsed[id]) card.classList.add('collapsed');
+    head.addEventListener('click',e=>{
+      if(e.target.closest('button,a,input,select')) return;
+      card.classList.toggle('collapsed');
+      const c=JSON.parse(localStorage.getItem('mijndag_collapsed')||'{}');
+      c[id]=card.classList.contains('collapsed');
+      localStorage.setItem('mijndag_collapsed',JSON.stringify(c));
+    });
+  });
+}
+
+// ════════════════════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════════════════════
 function init(){
+  initTheme();
   initHeader();
   const s=getS(); const td=today();
   const savedE=s.energy[td];
@@ -3413,6 +3496,7 @@ function init(){
     renderCalSetup();
   }
   initDrive();
+  initCollapsibleCards();
 }
 
 readStartLinkCID();

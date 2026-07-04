@@ -1396,13 +1396,34 @@ body.theme-light .moverlay { background: rgba(44,31,20,0.5); }
     </div>
     <div style="margin:6px 0 4px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em">Vervolgtaak (optioneel)</div>
     <div class="mfield"><label>Naam vervolgtaak</label><input id="np-dep-name" placeholder="Bijv. Medicijnen ophalen"></div>
-    <div class="mfield" style="display:flex;gap:10px">
-      <div style="flex:1"><label>Vertraging (dagen)</label>
+    <div class="mfield" style="display:flex;gap:6px;flex-wrap:wrap">
+      <div style="flex:1;min-width:80px"><label>Vertraging (dagen)</label>
         <input id="np-dep-delay" type="number" min="1" placeholder="Bijv. 3">
       </div>
-      <div style="flex:0 0 80px"><label>Duur (min)</label>
+      <div style="flex:0 0 70px"><label>Duur (min)</label>
         <input id="np-dep-duur" type="number" min="1" placeholder="—">
       </div>
+      <div style="flex:1;min-width:90px"><label>Energie</label>
+        <select id="np-dep-energy">
+          <option value="">— geen</option>
+          <option value="groen">Groen</option>
+          <option value="geel">Geel</option>
+          <option value="oranje">Oranje</option>
+          <option value="rood">Rood</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin:10px 0 4px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em">Jaarlijkse planning (optioneel)</div>
+    <div class="mfield"><label>Verschijnt elk jaar in</label>
+      <select id="np-anchor">
+        <option value="">— niet van toepassing</option>
+        <option value="1">Januari</option><option value="2">Februari</option>
+        <option value="3">Maart</option><option value="4">April</option>
+        <option value="5">Mei</option><option value="6">Juni</option>
+        <option value="7">Juli</option><option value="8">Augustus</option>
+        <option value="9">September</option><option value="10">Oktober</option>
+        <option value="11">November</option><option value="12">December</option>
+      </select>
     </div>
     <div class="mactions">
       <button class="mbtn-c" onclick="closeM(null,'m-new-periodic')">Annuleren</button>
@@ -1446,13 +1467,34 @@ body.theme-light .moverlay { background: rgba(44,31,20,0.5); }
     </div>
     <div style="margin:6px 0 4px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em">Vervolgtaak (optioneel)</div>
     <div class="mfield"><label>Naam vervolgtaak</label><input id="ep-dep-name" placeholder="Bijv. Medicijnen ophalen"></div>
-    <div class="mfield" style="display:flex;gap:10px">
-      <div style="flex:1"><label>Vertraging (dagen)</label>
+    <div class="mfield" style="display:flex;gap:6px;flex-wrap:wrap">
+      <div style="flex:1;min-width:80px"><label>Vertraging (dagen)</label>
         <input id="ep-dep-delay" type="number" min="1" placeholder="Bijv. 3">
       </div>
-      <div style="flex:0 0 80px"><label>Duur (min)</label>
+      <div style="flex:0 0 70px"><label>Duur (min)</label>
         <input id="ep-dep-duur" type="number" min="1" placeholder="—">
       </div>
+      <div style="flex:1;min-width:90px"><label>Energie</label>
+        <select id="ep-dep-energy">
+          <option value="">— geen</option>
+          <option value="groen">Groen</option>
+          <option value="geel">Geel</option>
+          <option value="oranje">Oranje</option>
+          <option value="rood">Rood</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin:10px 0 4px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em">Jaarlijkse planning (optioneel)</div>
+    <div class="mfield"><label>Verschijnt elk jaar in</label>
+      <select id="ep-anchor">
+        <option value="">— niet van toepassing</option>
+        <option value="1">Januari</option><option value="2">Februari</option>
+        <option value="3">Maart</option><option value="4">April</option>
+        <option value="5">Mei</option><option value="6">Juni</option>
+        <option value="7">Juli</option><option value="8">Augustus</option>
+        <option value="9">September</option><option value="10">Oktober</option>
+        <option value="11">November</option><option value="12">December</option>
+      </select>
     </div>
     <div class="mactions">
       <button class="mbtn-c" onclick="closeM(null,'m-edit-periodic')">Annuleren</button>
@@ -2346,6 +2388,7 @@ function renderBacklogSection(containerId, items, showDate){
     div.innerHTML=`
       <div class="tchk"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg></div>
       <span class="tname">${b.name}</span>
+      ${b.duur?`<span class="dur-badge">${b.duur} min</span>`:''}
       ${dateBadge}
       <div class="epip ${b.energy}"></div>
       <button class="editbtn" onclick="event.stopPropagation();openEditBack('${b.id}')">✎</button>
@@ -2899,9 +2942,9 @@ function renderVasteRoutines(){
       <div class="tchk"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg></div>
       <div class="per-text" style="flex:1">
         <span class="per-name" style="color:var(--gold)">${d.name}</span>
-        <span class="per-meta">${d.duur} min · afgeleid van was/gordijnen</span>
+        <span class="per-meta">${d.duur?' '+d.duur+' min · ':''}vervolgtaak</span>
       </div>
-      <div class="epip geel"></div>`;
+      ${d.energy?`<div class="epip ${d.energy}"></div>`:''}` ;
     list.appendChild(div);
   });
 
@@ -2984,6 +3027,7 @@ function doneVasteRoutine(id){
     if(r.triggersDep){
       if(!s.deps) s.deps=[];
       s.deps.push({id:'d'+Date.now(),name:r.triggersDep.name,duur:r.triggersDep.duur,
+        energy:r.triggersDep.energy||null,
         dueAt:new Date(Date.now()+r.triggersDep.delay*3600000).toISOString()});
     }
   }
@@ -3079,6 +3123,12 @@ function periodicUrgency(t){
 function isDue(t){
   const now=Date.now();
   if(t.skippedUntil&&new Date(t.skippedUntil).getTime()>now) return false;
+  if(t.anchorMonth){
+    const d=new Date(); const curMonth=d.getMonth()+1; const curYear=d.getFullYear();
+    if(!t.lastDone) return curMonth===t.anchorMonth;
+    const doneYear=new Date(t.lastDone+'T12:00:00').getFullYear();
+    return doneYear<curYear && curMonth===t.anchorMonth;
+  }
   if(!t.lastDone) return true;
   return (now-new Date(t.lastDone+'T12:00:00').getTime())/86400000>=t.freq;
 }
@@ -3200,6 +3250,7 @@ function donePeriodic(id){
   if(t.triggersDep){
     if(!s.deps) s.deps=[];
     s.deps.push({id:'d'+Date.now(),name:t.triggersDep.name,duur:t.triggersDep.duur,
+      energy:t.triggersDep.energy||null,
       dueAt:new Date(Date.now()+t.triggersDep.delay*3600000).toISOString()});
   }
   ss(s); renderPeriodic(); renderPeriodicTaken();
@@ -3226,6 +3277,8 @@ function openEditPeriodic(id){
   document.getElementById('ep-dep-name').value=t.triggersDep?.name||'';
   document.getElementById('ep-dep-delay').value=t.triggersDep?Math.round(t.triggersDep.delay/24):'';
   document.getElementById('ep-dep-duur').value=t.triggersDep?.duur||'';
+  document.getElementById('ep-dep-energy').value=t.triggersDep?.energy||'';
+  document.getElementById('ep-anchor').value=t.anchorMonth||'';
   openM('m-edit-periodic');
 }
 
@@ -3237,15 +3290,19 @@ function saveNewPeriodic(){
   const depName=document.getElementById('np-dep-name').value.trim();
   const depDelay=parseInt(document.getElementById('np-dep-delay').value)||null;
   const depDuur=parseInt(document.getElementById('np-dep-duur').value)||null;
-  const triggersDep=depName&&depDelay?{name:depName,delay:depDelay*24,duur:depDuur}:null;
+  const depEnergy=document.getElementById('np-dep-energy').value||null;
+  const anchorMonth=parseInt(document.getElementById('np-anchor').value)||null;
+  const triggersDep=depName&&depDelay?{name:depName,delay:depDelay*24,duur:depDuur,energy:depEnergy}:null;
   const s=getS();
-  s.periodicTasks.push({id:'pt'+Date.now(),name,freq,energy,duur,triggersDep,lastDone:null,skippedUntil:null});
+  s.periodicTasks.push({id:'pt'+Date.now(),name,freq,energy,duur,triggersDep,anchorMonth,lastDone:null,skippedUntil:null});
   ss(s); closeM(null,'m-new-periodic'); renderPeriodic();
   document.getElementById('np-name').value='';
   document.getElementById('np-duur').value='';
   document.getElementById('np-dep-name').value='';
   document.getElementById('np-dep-delay').value='';
   document.getElementById('np-dep-duur').value='';
+  document.getElementById('np-dep-energy').value='';
+  document.getElementById('np-anchor').value='';
 }
 
 function saveEditPeriodic(){
@@ -3257,11 +3314,14 @@ function saveEditPeriodic(){
   const depName=document.getElementById('ep-dep-name').value.trim();
   const depDelay=parseInt(document.getElementById('ep-dep-delay').value)||null;
   const depDuur=parseInt(document.getElementById('ep-dep-duur').value)||null;
-  const triggersDep=depName&&depDelay?{name:depName,delay:depDelay*24,duur:depDuur}:null;
+  const depEnergy=document.getElementById('ep-dep-energy').value||null;
+  const anchorMonth=parseInt(document.getElementById('ep-anchor').value)||null;
+  const triggersDep=depName&&depDelay?{name:depName,delay:depDelay*24,duur:depDuur,energy:depEnergy}:null;
   const s=getS(); const t=s.periodicTasks.find(t=>t.id===id); if(!t) return;
   t.name=name; t.freq=freq; t.energy=energy;
   if(duur) t.duur=duur; else delete t.duur;
   if(triggersDep) t.triggersDep=triggersDep; else delete t.triggersDep;
+  if(anchorMonth) t.anchorMonth=anchorMonth; else delete t.anchorMonth;
   ss(s); closeM(null,'m-edit-periodic'); renderPeriodic(); renderPeriodicTaken();
 }
 

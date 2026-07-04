@@ -1394,6 +1394,16 @@ body.theme-light .moverlay { background: rgba(44,31,20,0.5); }
         <input id="np-duur" type="number" min="1" placeholder="—">
       </div>
     </div>
+    <div style="margin:6px 0 4px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em">Vervolgtaak (optioneel)</div>
+    <div class="mfield"><label>Naam vervolgtaak</label><input id="np-dep-name" placeholder="Bijv. Medicijnen ophalen"></div>
+    <div class="mfield" style="display:flex;gap:10px">
+      <div style="flex:1"><label>Vertraging (dagen)</label>
+        <input id="np-dep-delay" type="number" min="1" placeholder="Bijv. 3">
+      </div>
+      <div style="flex:0 0 80px"><label>Duur (min)</label>
+        <input id="np-dep-duur" type="number" min="1" placeholder="—">
+      </div>
+    </div>
     <div class="mactions">
       <button class="mbtn-c" onclick="closeM(null,'m-new-periodic')">Annuleren</button>
       <button class="mbtn-p" onclick="saveNewPeriodic()">Toevoegen</button>
@@ -1420,7 +1430,30 @@ body.theme-light .moverlay { background: rgba(44,31,20,0.5); }
         <option value="365">Jaarlijks</option>
       </select>
     </div>
-    <div class="mfield"><label>Duur (minuten, optioneel)</label><input id="ep-duur" type="number" min="1" placeholder="bijv. 20"></div>
+    <div class="mfield" style="display:flex;gap:10px">
+      <div style="flex:1"><label>Energie</label>
+        <select id="ep-energy">
+          <option value="">— geen voorkeur</option>
+          <option value="groen">Groen</option>
+          <option value="geel">Geel</option>
+          <option value="oranje">Oranje</option>
+          <option value="rood">Rood</option>
+        </select>
+      </div>
+      <div style="flex:0 0 80px"><label>Duur (min)</label>
+        <input id="ep-duur" type="number" min="1" placeholder="—">
+      </div>
+    </div>
+    <div style="margin:6px 0 4px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em">Vervolgtaak (optioneel)</div>
+    <div class="mfield"><label>Naam vervolgtaak</label><input id="ep-dep-name" placeholder="Bijv. Medicijnen ophalen"></div>
+    <div class="mfield" style="display:flex;gap:10px">
+      <div style="flex:1"><label>Vertraging (dagen)</label>
+        <input id="ep-dep-delay" type="number" min="1" placeholder="Bijv. 3">
+      </div>
+      <div style="flex:0 0 80px"><label>Duur (min)</label>
+        <input id="ep-dep-duur" type="number" min="1" placeholder="—">
+      </div>
+    </div>
     <div class="mactions">
       <button class="mbtn-c" onclick="closeM(null,'m-edit-periodic')">Annuleren</button>
       <button class="mbtn-p" onclick="saveEditPeriodic()">Opslaan</button>
@@ -1436,13 +1469,18 @@ body.theme-light .moverlay { background: rgba(44,31,20,0.5); }
     <input type="hidden" id="eb-id">
     <div class="mfield"><label>Naam</label><input id="eb-name" placeholder="Taaknaam"></div>
     <div class="mfield"><label>Datum (optioneel)</label><input id="eb-date" type="date"></div>
-    <div class="mfield"><label>Energie</label>
-      <select id="eb-energy">
-        <option value="rood">🔴 Laag</option>
-        <option value="oranje">🟠 Beetje</option>
-        <option value="geel" selected>🟡 Gemiddeld</option>
-        <option value="groen">🟢 Hoog</option>
-      </select>
+    <div class="mfield" style="display:flex;gap:10px">
+      <div style="flex:1"><label>Energie</label>
+        <select id="eb-energy">
+          <option value="rood">🔴 Laag</option>
+          <option value="oranje">🟠 Beetje</option>
+          <option value="geel" selected>🟡 Gemiddeld</option>
+          <option value="groen">🟢 Hoog</option>
+        </select>
+      </div>
+      <div style="flex:0 0 80px"><label>Duur (min)</label>
+        <input id="eb-duur" type="number" min="1" placeholder="—">
+      </div>
     </div>
     <div class="mactions">
       <button class="mbtn-c" onclick="closeM(null,'m-edit-back')">Annuleren</button>
@@ -3184,6 +3222,10 @@ function openEditPeriodic(id){
   document.getElementById('ep-name').value=t.name;
   document.getElementById('ep-freq').value=t.freq;
   document.getElementById('ep-duur').value=t.duur||'';
+  document.getElementById('ep-energy').value=t.energy||'';
+  document.getElementById('ep-dep-name').value=t.triggersDep?.name||'';
+  document.getElementById('ep-dep-delay').value=t.triggersDep?Math.round(t.triggersDep.delay/24):'';
+  document.getElementById('ep-dep-duur').value=t.triggersDep?.duur||'';
   openM('m-edit-periodic');
 }
 
@@ -3192,11 +3234,18 @@ function saveNewPeriodic(){
   const freq=parseInt(document.getElementById('np-freq').value);
   const energy=document.getElementById('np-energy').value||null;
   const duur=parseInt(document.getElementById('np-duur').value)||null;
+  const depName=document.getElementById('np-dep-name').value.trim();
+  const depDelay=parseInt(document.getElementById('np-dep-delay').value)||null;
+  const depDuur=parseInt(document.getElementById('np-dep-duur').value)||null;
+  const triggersDep=depName&&depDelay?{name:depName,delay:depDelay*24,duur:depDuur}:null;
   const s=getS();
-  s.periodicTasks.push({id:'pt'+Date.now(),name,freq,energy,duur,lastDone:null,skippedUntil:null});
+  s.periodicTasks.push({id:'pt'+Date.now(),name,freq,energy,duur,triggersDep,lastDone:null,skippedUntil:null});
   ss(s); closeM(null,'m-new-periodic'); renderPeriodic();
   document.getElementById('np-name').value='';
   document.getElementById('np-duur').value='';
+  document.getElementById('np-dep-name').value='';
+  document.getElementById('np-dep-delay').value='';
+  document.getElementById('np-dep-duur').value='';
 }
 
 function saveEditPeriodic(){
@@ -3204,9 +3253,15 @@ function saveEditPeriodic(){
   const name=document.getElementById('ep-name').value.trim(); if(!name) return;
   const freq=parseInt(document.getElementById('ep-freq').value);
   const duur=parseInt(document.getElementById('ep-duur').value)||null;
+  const energy=document.getElementById('ep-energy').value||null;
+  const depName=document.getElementById('ep-dep-name').value.trim();
+  const depDelay=parseInt(document.getElementById('ep-dep-delay').value)||null;
+  const depDuur=parseInt(document.getElementById('ep-dep-duur').value)||null;
+  const triggersDep=depName&&depDelay?{name:depName,delay:depDelay*24,duur:depDuur}:null;
   const s=getS(); const t=s.periodicTasks.find(t=>t.id===id); if(!t) return;
-  t.name=name; t.freq=freq;
+  t.name=name; t.freq=freq; t.energy=energy;
   if(duur) t.duur=duur; else delete t.duur;
+  if(triggersDep) t.triggersDep=triggersDep; else delete t.triggersDep;
   ss(s); closeM(null,'m-edit-periodic'); renderPeriodic(); renderPeriodicTaken();
 }
 
@@ -3218,7 +3273,8 @@ function openEditBack(id){
   document.getElementById('eb-id').value=id;
   document.getElementById('eb-name').value=b.name;
   document.getElementById('eb-date').value=b.date||'';
-  document.getElementById('eb-energy').value=b.energy;
+  document.getElementById('eb-energy').value=b.energy||'geel';
+  document.getElementById('eb-duur').value=b.duur||'';
   openM('m-edit-back');
 }
 
@@ -3227,8 +3283,10 @@ function saveEditBack(){
   const name=document.getElementById('eb-name').value.trim(); if(!name) return;
   const date=document.getElementById('eb-date').value||null;
   const energy=document.getElementById('eb-energy').value;
+  const duur=parseInt(document.getElementById('eb-duur').value)||null;
   const s=getS(); const b=s.backlog.find(b=>b.id===id); if(!b) return;
   b.name=name; b.date=date; b.energy=energy;
+  if(duur) b.duur=duur; else delete b.duur;
   ss(s); closeM(null,'m-edit-back'); renderMaster();
 }
 

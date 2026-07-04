@@ -1006,14 +1006,20 @@ body.theme-light .moverlay { background: rgba(44,31,20,0.5); }
     <div class="card">
       <div class="card-head">
         <span class="card-title">Eenmalige taken</span>
-        <span class="card-count" id="planned-count">—</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="card-count" id="planned-count">—</span>
+          <button class="card-btn" onclick="openM('m-back')">+ Toevoegen</button>
+        </div>
       </div>
       <div id="planned-list"></div>
     </div>
     <div class="card">
       <div class="card-head">
         <span class="card-title">Backlog</span>
-        <span class="card-count" id="backlog-count">—</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="card-count" id="backlog-count">—</span>
+          <button class="card-btn" onclick="openM('m-back')">+ Toevoegen</button>
+        </div>
       </div>
       <div id="backlog-list"></div>
     </div>
@@ -1201,13 +1207,18 @@ body.theme-light .moverlay { background: rgba(44,31,20,0.5); }
     <div class="mfield"><label>Datum (optioneel — laat leeg voor backlog)</label>
       <input id="b-date" type="date">
     </div>
-    <div class="mfield"><label>Energieniveau</label>
-      <select id="b-energy">
-        <option value="rood">🔴 Laag</option>
-        <option value="oranje">🟠 Beetje</option>
-        <option value="geel" selected>🟡 Gemiddeld</option>
-        <option value="groen">🟢 Hoog</option>
-      </select>
+    <div class="mfield" style="display:flex;gap:10px">
+      <div style="flex:1"><label>Energieniveau</label>
+        <select id="b-energy">
+          <option value="rood">🔴 Laag</option>
+          <option value="oranje">🟠 Beetje</option>
+          <option value="geel" selected>🟡 Gemiddeld</option>
+          <option value="groen">🟢 Hoog</option>
+        </select>
+      </div>
+      <div style="flex:0 0 80px"><label>Duur (min)</label>
+        <input id="b-duur" type="number" min="1" placeholder="—">
+      </div>
     </div>
     <div class="mactions">
       <button class="mbtn-c" onclick="closeM(null,'m-back')">Annuleren</button>
@@ -1368,6 +1379,20 @@ body.theme-light .moverlay { background: rgba(44,31,20,0.5); }
         <option value="180">Halfjaarlijks</option>
         <option value="365">Jaarlijks</option>
       </select>
+    </div>
+    <div class="mfield" style="display:flex;gap:10px">
+      <div style="flex:1"><label>Energie</label>
+        <select id="np-energy">
+          <option value="">— geen voorkeur</option>
+          <option value="groen">Groen</option>
+          <option value="geel">Geel</option>
+          <option value="oranje">Oranje</option>
+          <option value="rood">Rood</option>
+        </select>
+      </div>
+      <div style="flex:0 0 80px"><label>Duur (min)</label>
+        <input id="np-duur" type="number" min="1" placeholder="—">
+      </div>
     </div>
     <div class="mactions">
       <button class="mbtn-c" onclick="closeM(null,'m-new-periodic')">Annuleren</button>
@@ -2317,11 +2342,13 @@ function saveBack(){
   const name=document.getElementById('b-name').value.trim(); if(!name) return;
   const date=document.getElementById('b-date').value||'';
   const energy=document.getElementById('b-energy').value;
+  const duur=parseInt(document.getElementById('b-duur').value)||null;
   const s=getS();
-  s.backlog.push({id:'b'+Date.now(),name,date,energy,done:false});
+  s.backlog.push({id:'b'+Date.now(),name,date,energy,duur,done:false});
   ss(s); closeM(null,'m-back');
   document.getElementById('b-name').value='';
   document.getElementById('b-date').value='';
+  document.getElementById('b-duur').value='';
   renderMaster(); renderTasks();
 }
 
@@ -3163,10 +3190,13 @@ function openEditPeriodic(id){
 function saveNewPeriodic(){
   const name=document.getElementById('np-name').value.trim(); if(!name) return;
   const freq=parseInt(document.getElementById('np-freq').value);
+  const energy=document.getElementById('np-energy').value||null;
+  const duur=parseInt(document.getElementById('np-duur').value)||null;
   const s=getS();
-  s.periodicTasks.push({id:'pt'+Date.now(),name,freq,lastDone:null,skippedUntil:null});
+  s.periodicTasks.push({id:'pt'+Date.now(),name,freq,energy,duur,lastDone:null,skippedUntil:null});
   ss(s); closeM(null,'m-new-periodic'); renderPeriodic();
   document.getElementById('np-name').value='';
+  document.getElementById('np-duur').value='';
 }
 
 function saveEditPeriodic(){

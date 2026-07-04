@@ -1952,7 +1952,7 @@ function renderTasks(){
   });
 
   s.tasks.forEach((t,i)=>{
-    if(t.date && t.date !== td) return;
+    if(t.date && t.date > td) return;
     if(timeBudget && t.duur && t.duur > timeBudget) return;
     const isDone=done.includes(t.id);
     const f=fits(t.energy,curE);

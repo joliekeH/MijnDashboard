@@ -1313,6 +1313,7 @@ body.theme-light .moverlay { background: rgba(44,31,20,0.5); }
     <div class="mfield"><label>Naam</label><input id="nr-name" placeholder="Bijv. Brievenbus legen"></div>
     <div class="mfield"><label>Hoe vaak</label>
       <select id="nr-freq">
+        <option value="1">Dagelijks</option>
         <option value="4">2x per week</option>
         <option value="7" selected>Wekelijks</option>
         <option value="14">Tweewekelijks</option>
@@ -1348,6 +1349,7 @@ body.theme-light .moverlay { background: rgba(44,31,20,0.5); }
     <div class="mfield"><label>Naam</label><input id="er-name" placeholder="Naam"></div>
     <div class="mfield"><label>Hoe vaak</label>
       <select id="er-freq">
+        <option value="1">Dagelijks</option>
         <option value="4">2x per week</option>
         <option value="7">Wekelijks</option>
         <option value="14">Tweewekelijks</option>
@@ -2919,7 +2921,7 @@ function renderDagRoutines(){
     div.onclick=()=>{ doneDep(d.id); renderDagRoutines(); };
     div.innerHTML=`
       <div class="tchk"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg></div>
-      <span class="tname" style="color:var(--gold)">${d.name}</span>
+      <span class="tname" style="color:var(--ember)">${d.name}</span>
       ${d.duur?`<span class="dur-badge">${d.duur} min</span>`:''}`;
     list.appendChild(div);
   });
@@ -2951,7 +2953,7 @@ function renderDagRoutines(){
 // ════════════════════════════════════════════════════════
 // VASTE ROUTINES
 // ════════════════════════════════════════════════════════
-const VR_FREQ_LABELS={4:'2x per week',7:'wekelijks',14:'tweewekelijks'};
+const VR_FREQ_LABELS={1:'dagelijks',4:'2x per week',7:'wekelijks',14:'tweewekelijks'};
 
 function renderVasteRoutines(){
   const s=getS(); const now=Date.now();
@@ -2968,7 +2970,7 @@ function renderVasteRoutines(){
     div.innerHTML=`
       <div class="tchk"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg></div>
       <div class="per-text" style="flex:1">
-        <span class="per-name" style="color:var(--gold)">${d.name}</span>
+        <span class="per-name" style="color:var(--ember)">${d.name}</span>
         <span class="per-meta">${d.duur?' '+d.duur+' min · ':''}vervolgtaak</span>
       </div>
       ${d.energy?`<div class="epip ${d.energy}"></div>`:''}` ;

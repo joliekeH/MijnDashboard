@@ -358,10 +358,18 @@ body::before {
 .per-text { flex: 1; min-width: 0; }
 .per-name { display: block; font-size: 14px; color: var(--ink2); font-weight: 500; }
 .per-meta { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; }
-.per-item.per-late .per-name { color: var(--gold); }
-.per-item.per-late .per-meta { color: var(--gold-dim); }
-.per-item.per-overdue .per-name { color: var(--rose); }
-.per-item.per-overdue .per-meta { color: var(--rose-dim); }
+.per-item.per-late .per-name,
+.titem.per-late .tname,
+.titem.per-late .per-name { color: var(--gold); }
+.per-item.per-late .per-meta,
+.titem.per-late .per-meta { color: var(--gold-dim); }
+.per-item.per-overdue .per-name,
+.titem.per-overdue .tname,
+.titem.per-overdue .per-name { color: var(--rose); }
+.per-item.per-overdue .per-meta,
+.titem.per-overdue .per-meta { color: var(--rose-dim); }
+.prio-btn { background:none; border:none; cursor:pointer; padding:0 2px; font-size:14px; color:var(--border2); flex-shrink:0; line-height:1; }
+.prio-btn.active { color:var(--gold); }
 .skip-btn {
   font-size: 11px; color: var(--muted); font-weight: 600;
   background: none; border: 1px solid var(--border2); border-radius: 8px;
@@ -2235,15 +2243,17 @@ function renderTasks(){
     list.appendChild(div);
   });
 
-  s.tasks.forEach((t,i)=>{
-    if(t.date && t.date > td) return;
-    if(timeBudget && t.duur && t.duur > timeBudget) return;
+  const td2=today();
+  [...s.tasks]
+    .filter(t=>!t.date||t.date<=td)
+    .filter(t=>!timeBudget||!t.duur||t.duur<=timeBudget)
+    .sort((a,b)=>(b.priority?1:0)-(a.priority?1:0))
+    .forEach(t=>{
     const isDone=done.includes(t.id);
     const f=fits(t.energy,curE);
     const div=document.createElement('div');
     div.className='titem'+(isDone?' done':'')+((!f&&!isDone)?' dimmed':'');
     div.onclick=()=>toggleTask(t.id);
-    const td2=today();
     const dlBadge=t.deadline?`<span class="bdate ${t.deadline<td2?'overdue':t.deadline===td2?'today-date':''}">${t.deadline===td2?'Vandaag':t.deadline<td2?'Te laat':formatDate(t.deadline)}</span>`:'';
     const durBadge=t.duur?`<span class="dur-badge">${t.duur} min</span>`:'';
     div.innerHTML=`
@@ -2251,8 +2261,9 @@ function renderTasks(){
       <span class="tname">${t.name}</span>
       ${dlBadge}${durBadge}
       <div class="epip ${t.energy}"></div>
+      <button class="prio-btn${t.priority?' active':''}" onclick="event.stopPropagation();toggleTaskPriority('${t.id}')">★</button>
       <button class="editbtn" onclick="event.stopPropagation();openEditTask('${t.id}')">✎</button>
-      <button class="delbtn" onclick="event.stopPropagation();deleteTask(${i})">×</button>`;
+      <button class="delbtn" onclick="event.stopPropagation();deleteTask('${t.id}')">×</button>`;
     list.appendChild(div);
   });
 
@@ -2269,8 +2280,18 @@ function toggleTask(id){
   ss(s); renderTasks();
 }
 
-function deleteTask(i){
-  const s=getS(); s.tasks.splice(i,1); ss(s); renderTasks();
+function deleteTask(id){
+  const s=getS(); s.tasks=s.tasks.filter(t=>t.id!==id); ss(s); renderTasks();
+}
+
+function toggleTaskPriority(id){
+  const s=getS(); const t=s.tasks.find(t=>t.id===id); if(!t) return;
+  t.priority=!t.priority; ss(s); renderTasks();
+}
+
+function toggleBackPriority(id){
+  const s=getS(); const b=s.backlog.find(b=>b.id===id); if(!b) return;
+  b.priority=!b.priority; ss(s); renderMaster(); renderTasks();
 }
 
 function addTask(){
@@ -2357,10 +2378,10 @@ function renderMaster(){
 
   // Planned = has date <= today, not done
   const planned=s.backlog.filter(b=>b.date&&b.date<=td&&!b.done)
-    .sort((a,b)=>a.date.localeCompare(b.date));
+    .sort((a,b)=>(b.priority?1:0)-(a.priority?1:0)||a.date.localeCompare(b.date));
   // Backlog = no date or future date, not done
   const backlog=s.backlog.filter(b=>(!b.date||b.date>td)&&!b.done)
-    .sort((a,b)=>(a.date||'9999').localeCompare(b.date||'9999'));
+    .sort((a,b)=>(b.priority?1:0)-(a.priority?1:0)||(a.date||'9999').localeCompare(b.date||'9999'));
   // Done
   const doneItems=s.backlog.filter(b=>b.done);
 
@@ -2395,6 +2416,7 @@ function renderBacklogSection(containerId, items, showDate){
       ${b.duur?`<span class="dur-badge">${b.duur} min</span>`:''}
       ${dateBadge}
       <div class="epip ${b.energy}"></div>
+      <button class="prio-btn${b.priority?' active':''}" onclick="event.stopPropagation();toggleBackPriority('${b.id}')">★</button>
       <button class="editbtn" onclick="event.stopPropagation();openEditBack('${b.id}')">✎</button>
       <button class="delbtn" onclick="event.stopPropagation();deleteBack('${b.id}')">×</button>`;
     c.appendChild(div);
@@ -2908,8 +2930,9 @@ function renderDagRoutines(){
     const eFit=!r.energy||fits(r.energy,curE);
     const tFit=!timeBudget||!r.duur||r.duur<=timeBudget;
     const dim=!eFit||!tFit;
+    const urgency=r.lastDone&&!doneToday?(now-new Date(r.lastDone+'T12:00:00').getTime())/86400000/r.freq:0;
     const div=document.createElement('div');
-    div.className='titem'+(doneToday?' done':(due?'':' vr-notdue'))+(dim?' vr-dim':'');
+    div.className='titem'+(doneToday?' done':(due?'':' vr-notdue'))+(dim?' vr-dim':'')+(urgency>2?' per-overdue':urgency>1?' per-late':'');
     div.style.pointerEvents='auto';
     div.onclick=()=>{ doneVasteRoutine(r.id); renderDagRoutines(); renderVasteRoutines(); };
     const lastText=!r.lastDone?'nog nooit':days===0?'vandaag':days===1?'gisteren':`${days}d geleden`;
@@ -2960,8 +2983,9 @@ function renderVasteRoutines(){
     const eFit=!r.energy||fits(r.energy,curE);
     const tFit=!timeBudget||!r.duur||r.duur<=timeBudget;
     const dim=!eFit||!tFit;
+    const urgency=r.lastDone&&!doneToday?(now-new Date(r.lastDone+'T12:00:00').getTime())/86400000/r.freq:0;
     const div=document.createElement('div');
-    div.className='titem'+(doneToday?' done':(due?'':' vr-notdue'))+(dim?' vr-dim':'');
+    div.className='titem'+(doneToday?' done':(due?'':' vr-notdue'))+(dim?' vr-dim':'')+(urgency>2?' per-overdue':urgency>1?' per-late':'');
     div.style.pointerEvents='auto';
     div.onclick=()=>doneVasteRoutine(r.id);
     const lastText=!r.lastDone?'nog nooit':days===0?'vandaag':days===1?'gisteren':`${days} d geleden`;

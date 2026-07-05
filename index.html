@@ -2925,7 +2925,7 @@ function renderDagRoutines(){
       ${d.duur?`<span class="dur-badge">${d.duur} min</span>`:''}`;
     list.appendChild(div);
   });
-  (s.vasteRoutines||[]).forEach(r=>{
+  [...(s.vasteRoutines||[])].sort((a,b)=>vrUrgency(b,now)-vrUrgency(a,now)).forEach(r=>{
     const days=r.lastDone?Math.floor((now-new Date(r.lastDone+'T12:00:00').getTime())/86400000):null;
     const due=!r.lastDone||days>=r.freq;
     const doneToday=r.lastDone===today();
@@ -2954,6 +2954,12 @@ function renderDagRoutines(){
 // VASTE ROUTINES
 // ════════════════════════════════════════════════════════
 const VR_FREQ_LABELS={1:'dagelijks',4:'2x per week',7:'wekelijks',14:'tweewekelijks'};
+function vrUrgency(r,now){
+  if(r.lastDone===today()) return -999;
+  if(!r.lastDone) return 1;
+  const u=(now-new Date(r.lastDone+'T12:00:00').getTime())/86400000/r.freq;
+  return u<1?u-10:u; // niet aan de beurt → onder alle due taken
+}
 
 function renderVasteRoutines(){
   const s=getS(); const now=Date.now();
@@ -2978,7 +2984,7 @@ function renderVasteRoutines(){
   });
 
   // Routines
-  (s.vasteRoutines||[]).forEach(r=>{
+  [...(s.vasteRoutines||[])].sort((a,b)=>vrUrgency(b,now)-vrUrgency(a,now)).forEach(r=>{
     const days=r.lastDone?Math.floor((now-new Date(r.lastDone+'T12:00:00').getTime())/86400000):null;
     const due=!r.lastDone||days>=r.freq;
     const doneToday=r.lastDone===today();

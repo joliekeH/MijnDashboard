@@ -358,6 +358,8 @@ body::before {
 .per-text { flex: 1; min-width: 0; }
 .per-name { display: block; font-size: 14px; color: var(--ink2); font-weight: 500; }
 .per-meta { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; }
+.per-item.per-late .per-name { color: var(--gold); }
+.per-item.per-late .per-meta { color: var(--gold-dim); }
 .per-item.per-overdue .per-name { color: var(--rose); }
 .per-item.per-overdue .per-meta { color: var(--rose-dim); }
 .skip-btn {
@@ -3154,9 +3156,9 @@ function renderPeriodic(showMore){
   }
   const timeVisible=timeBudget?visible.filter(t=>!t.duur||t.duur<=timeBudget):visible;
   timeVisible.forEach(t=>{
-    const overdue=periodicUrgency(t)>2;
+    const urgency=periodicUrgency(t);
     const div=document.createElement('div');
-    div.className='per-item'+(overdue?' per-overdue':'');
+    div.className='per-item'+(urgency>2?' per-overdue':urgency>1?' per-late':'');
     if(t.isApparaten) div.onclick=()=>openApparaten();
     const days=t.lastDone?Math.floor((Date.now()-new Date(t.lastDone+'T12:00:00').getTime())/86400000):null;
     const lastText=!t.lastDone?'nog nooit':days===0?'vandaag':days===1?'gisteren':`${days} dagen geleden`;
@@ -3205,9 +3207,9 @@ function renderPeriodicTaken(showAll){
   } else {
     toShow.forEach(t=>{
       const due=isDue(t);
-      const overdue=periodicUrgency(t)>2;
+      const urgency=periodicUrgency(t);
       const div=document.createElement('div');
-      div.className='per-item'+(overdue?' per-overdue':'')+(due?'':' vr-notdue');
+      div.className='per-item'+(urgency>2?' per-overdue':urgency>1?' per-late':'')+(due?'':' vr-notdue');
       const days=t.lastDone?Math.floor((Date.now()-new Date(t.lastDone+'T12:00:00').getTime())/86400000):null;
       const lastText=!t.lastDone?'nog nooit':days===0?'✓ vandaag':days===1?'gisteren':`${days} d geleden`;
       const freqLabel=FREQ_LABELS[t.freq]||`elke ${t.freq} dagen`;
